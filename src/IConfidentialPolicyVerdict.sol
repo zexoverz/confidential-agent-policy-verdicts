@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: CC0-1.0
 pragma solidity ^0.8.20;
 
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
 /// @notice The verdict envelope. EVERY field is a public input of the proving program.
 struct Verdict {
     uint256 agentId;          // ERC-8004 Identity Registry token id
@@ -15,7 +17,9 @@ struct Verdict {
 
 /// @notice Consume a confidential policy verdict: a ZK proof that an action was
 /// evaluated against a committed (secret) policy and permitted.
-interface IConfidentialPolicyVerdict {
+/// @dev ERC-165 interfaceId = XOR of this interface's own 5 function selectors (inherited
+/// IERC165.supportsInterface is excluded per the language rule). Value: 0x6c832e88.
+interface IConfidentialPolicyVerdict is IERC165 {
     event VerdictConsumed(
         bytes32 indexed nullifier,
         uint256 indexed agentId,

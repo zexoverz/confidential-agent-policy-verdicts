@@ -54,6 +54,10 @@ than reverting — while `consume` reverts `InvalidProof`.
 The verifier sits behind `IVerifier.verifyProof(programKey, publicInputs, proof)`, keeping the
 guard proving-system agnostic (SP1 / Groth16 / RISC0 all slot in behind the same call).
 
+The guard is **ERC-165** discoverable. The `IConfidentialPolicyVerdict` interfaceId is **`0x6c832e88`**
+(XOR of its five function selectors — `verify`, `verdictDigest`, both `consume` overloads, and
+`isConsumed`; the inherited `IERC165.supportsInterface` is excluded, per Solidity's `type().interfaceId`).
+
 ## Design decisions
 
 Two questions were raised on the Magicians thread and resolved there; this implementation reflects

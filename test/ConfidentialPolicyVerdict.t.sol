@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: CC0-1.0
 pragma solidity ^0.8.20;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console2} from "forge-std/Test.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ConfidentialPolicyVerdict} from "../src/ConfidentialPolicyVerdict.sol";
 import {PolicyDomainRegistry} from "../src/PolicyDomainRegistry.sol";
 import {IConfidentialPolicyVerdict, Verdict} from "../src/IConfidentialPolicyVerdict.sol";
@@ -233,5 +234,20 @@ contract CAPVTest is Test {
             abi.encodeWithSelector(GuardedExecutor.ActionCommitmentMismatch.selector, expected, v.actionCommitment)
         );
         gx.execute(v, "proof", "", address(sink), 0, cd);
+    }
+
+    // --- ERC-165 ---
+
+    // 17. supportsInterface true for the standard + IERC165, false otherwise
+    function test_SupportsInterface() public view {
+        assertTrue(guard.supportsInterface(type(IConfidentialPolicyVerdict).interfaceId), "own");
+        assertTrue(guard.supportsInterface(type(IERC165).interfaceId), "erc165");
+        assertFalse(guard.supportsInterface(0xffffffff), "0xffffffff must be false");
+        assertFalse(guard.supportsInterface(0xdeadbeef), "random");
+    }
+
+    // Emit the canonical interfaceId (run with -vv) so it can be recorded in the docs/spec.
+    function test_LogInterfaceId() public pure {
+        console2.logBytes4(type(IConfidentialPolicyVerdict).interfaceId);
     }
 }

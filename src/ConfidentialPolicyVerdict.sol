@@ -6,10 +6,12 @@ import {IPolicyDomainRegistry} from "./IPolicyDomainRegistry.sol";
 import {IVerifier} from "./IVerifier.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
 /// @notice The Guard: consumes a confidential policy verdict and burns its nullifier.
 /// The core normative contract of the standard.
-contract ConfidentialPolicyVerdict is IConfidentialPolicyVerdict, EIP712 {
+contract ConfidentialPolicyVerdict is IConfidentialPolicyVerdict, EIP712, ERC165 {
     IPolicyDomainRegistry public immutable registry;
 
     bytes32 private constant VERDICT_TYPEHASH = keccak256(
@@ -25,6 +27,11 @@ contract ConfidentialPolicyVerdict is IConfidentialPolicyVerdict, EIP712 {
 
     function isConsumed(bytes32 domainId, bytes32 nullifier) public view returns (bool) {
         return _consumed[domainId][nullifier];
+    }
+
+    /// @inheritdoc IERC165
+    function supportsInterface(bytes4 interfaceId) public view override(ERC165, IERC165) returns (bool) {
+        return interfaceId == type(IConfidentialPolicyVerdict).interfaceId || super.supportsInterface(interfaceId);
     }
 
     function verdictDigest(Verdict calldata v) public view returns (bytes32) {
