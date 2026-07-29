@@ -1,0 +1,7 @@
+[package]
+name = "capv-interpreter"
+version = "0.1.0"
+edition = "2021"
+
+# [dependencies]
+# sp1-zkvm = "..."   # add when wiring the real proving program

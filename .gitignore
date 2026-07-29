@@ -1,0 +1,16 @@
+# Foundry
+cache/
+out/
+broadcast/
+
+# forge-std is a git submodule — its pointer is tracked via .gitmodules,
+# its working tree is managed by git submodule (not ignored here).
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# SP1 / Rust build artifacts
+sp1/**/target/
