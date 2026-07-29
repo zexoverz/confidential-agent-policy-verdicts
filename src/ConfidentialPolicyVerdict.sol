@@ -72,7 +72,7 @@ contract ConfidentialPolicyVerdict is IConfidentialPolicyVerdict, EIP712 {
     }
 
     /// @dev Checks run in the exact order the spec mandates; revert on the first failure.
-    function _consume(Verdict calldata v, bytes calldata proof, bytes calldata executorAuth) internal {
+    function _consume(Verdict calldata v, bytes calldata proof, bytes memory executorAuth) internal {
         IPolicyDomainRegistry.Domain memory d = registry.domain(v.domainId);
         if (!d.active) revert DomainInactive(v.domainId);                                    // 1
         if (v.decision != 1) revert VerdictDenied();                                         // 2
@@ -89,7 +89,7 @@ contract ConfidentialPolicyVerdict is IConfidentialPolicyVerdict, EIP712 {
     /// @dev Executor is bound cryptographically, not positionally. Direct submission
     /// (msg.sender == executor) needs no signature; a relayer must present the executor's
     /// EIP-712 signature (ECDSA or ERC-1271) over this verdict's digest.
-    function _requireExecutorAuthorized(Verdict calldata v, bytes calldata executorAuth) internal view {
+    function _requireExecutorAuthorized(Verdict calldata v, bytes memory executorAuth) internal view {
         if (msg.sender == v.executor) return;
         if (executorAuth.length == 0) revert ExecutorMismatch(v.executor, msg.sender);
         if (!SignatureChecker.isValidSignatureNow(v.executor, verdictDigest(v), executorAuth)) {

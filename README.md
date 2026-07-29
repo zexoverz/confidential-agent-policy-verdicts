@@ -54,19 +54,25 @@ than reverting — while `consume` reverts `InvalidProof`.
 The verifier sits behind `IVerifier.verifyProof(programKey, publicInputs, proof)`, keeping the
 guard proving-system agnostic (SP1 / Groth16 / RISC0 all slot in behind the same call).
 
-## Open design questions
+## Design decisions
 
-These are live and being discussed on the Magicians thread — feedback welcome:
+Two questions were raised on the Magicians thread and resolved there; this implementation reflects
+the resolution:
 
-1. **Where does action-binding live?** `consume` receives a `Verdict` (with `actionCommitment`)
-   but not the action params, so it cannot recompute the commitment itself. Here, the *guarded
-   contract* (`GuardedExecutor`) recomputes and compares before calling `consume`. Should the
-   guard stay a minimal verdict primitive (this choice), or should the standard define a single
-   entrypoint that takes action + verdict together?
-2. **`v.executor` semantics through a guarded contract.** `consume` requires
-   `v.executor == msg.sender`, but in the guarded-contract flow `msg.sender` is the contract, so
-   the executor binds to the contract rather than the user — reopening front-running of
-   `execute()`. Executor = direct submitter, or executor = end EOA with a trusted relayer?
+1. **Action-binding — canonical commitment.** `consume` receives a `Verdict` (with
+   `actionCommitment`) but not the action params, so it cannot recompute the commitment itself. The
+   standard fixes a **canonical action preimage** (`src/PolicyAction.sol`) that both the guarded
+   contract and the proving program hash byte-for-byte — the guard stays a minimal verdict
+   primitive, but the commitment is no longer per-integrator. The preimage is domain-separated
+   (`chainId` + `domainId`) to block cross-chain / cross-domain replay. Modelled on ERC-4337's
+   canonical UserOperation hash.
+2. **Executor — cryptographic binding, not positional.** `consume` still succeeds for direct
+   submission (`msg.sender == v.executor`), but a relayer may submit on the executor's behalf by
+   presenting an **EIP-712 signature** by `v.executor` over `verdictDigest(v)` — verified with
+   `SignatureChecker`, so a **smart-contract account (ERC-1271)** executor works too. The verdict's
+   single-use nullifier gives the signature replay protection for free. Because the action is
+   committed *and* the executor is bound by signature, front-running the submission is neutral:
+   any submitter causes the identical committed execution.
 
 ## License
 
