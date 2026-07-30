@@ -20,7 +20,7 @@
 //!    must use the same. The on-chain Guard treats `policy_root` as an opaque commitment.
 //!  - Version-sensitive calls (to_be_bytes / to_le_bits) are flagged; check against your nargo.
 
-use dep::keccak256::keccak256;
+use keccak256::keccak256;
 
 global TREE_DEPTH: u32 = 8; // allowlist up to 2^8 entries; raise as needed
 
@@ -64,12 +64,12 @@ fn main(
 
 // Recompute a Merkle root from a leaf, its index, and its sibling path (pedersen nodes).
 fn compute_merkle_root(leaf: Field, index: Field, path: [Field; TREE_DEPTH]) -> Field {
-    let bits: [u1; TREE_DEPTH] = index.to_le_bits(); // low bit = level 0
+    let bits: [bool; TREE_DEPTH] = index.to_le_bits(); // low bit = level 0; true = current is right child
     let mut current = leaf;
     for i in 0..TREE_DEPTH {
         let sibling = path[i];
-        let left = if bits[i] == 0 { current } else { sibling };
-        let right = if bits[i] == 0 { sibling } else { current };
+        let left = if bits[i] { sibling } else { current };
+        let right = if bits[i] { current } else { sibling };
         current = std::hash::pedersen_hash([left, right]);
     }
     current
