@@ -4,6 +4,7 @@ Reference implementation of the draft ERC **Confidential Agent Policy Verdicts**
 pre-execution allow/deny verdict on an autonomous agent's action, proven in zero-knowledge
 against a policy that is *committed to but never disclosed on-chain*.
 
+- Spec (working draft, shared source before the ethereum/EIPs PR): [SPEC.md](./SPEC.md)
 - Discussion: [Ethereum Magicians thread](https://ethereum-magicians.org/t/draft-idea-confidential-agent-policy-verdicts/29088)
 - Builds on ERC-8004 (agent identity) and ERC-7812 (evidence registry).
 
