@@ -36,7 +36,7 @@ bb verify  -k target/vk -p target/proof
 bb write_solidity_verifier -k target/vk -o target/Verifier.sol
 ```
 
-`Verifier.sol` is an UltraHonk Solidity verifier. Wrap it to implement the ERC's `IVerifier.verifyProof(programKey, publicInputs, proof)` and register it as a domain's verifier in `PolicyDomainRegistry`, replacing `MockVerifier`.
+`Verifier.sol` is an UltraHonk Solidity verifier, checked in at `src/verifier/HonkVerifier.sol`. `src/HonkVerifierAdapter.sol` wraps it to implement the ERC's `IVerifier.verifyProof(programKey, publicInputs, proof)`: it decodes the `Verdict`, serializes the 37 public inputs, and calls the verifier. Register the adapter as a domain's verifier in `PolicyDomainRegistry` in place of `MockVerifier`.
 
 ## Public input layout
 
@@ -50,5 +50,5 @@ The circuit's public inputs mirror the on-chain `Verdict`: `agent_id`, `domain_i
 - [x] **real proof**: `Prover.example.toml` witness → `nargo execute` → `bb prove` → `bb verify` (verified)
 - [x] **keccak packing verified**: matches Solidity `PolicyAction.commit` byte-for-byte (`test/PackingCheck.t.sol`)
 - [x] **Solidity verifier generated**: `HonkVerifier` (keccak transcript), `verify(proof, bytes32[37])`
-- [ ] wire `HonkVerifier` behind `IVerifier` (map Verdict → 37 public inputs), swap out `MockVerifier`
+- [x] **wired behind `IVerifier`**: `HonkVerifierAdapter` maps Verdict → 37 public inputs; real proof verifies on-chain and through the Guard's `consume` (`test/ConsumeReal.t.sol`)
 - [ ] Tokyo delta on top (Mandate: private accumulator, or CAPVand: multi-policy)
