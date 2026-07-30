@@ -60,7 +60,7 @@ src
 ├─ IPolicyAttestation.sol          ERC-8004 Validation Registry handoff schema
 ├─ GuardedExecutor.sol             example consumer
 └─ mocks/                          test doubles
-noir/                              Noir allowlist circuit (active) — Barretenberg → Groth16 verifier
+noir/                              Noir allowlist circuit (active) — Barretenberg (UltraHonk) verifier
 sp1/                               earlier proving-program skeleton (obligations reference)
 ```
 
