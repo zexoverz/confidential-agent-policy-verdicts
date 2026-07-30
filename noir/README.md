@@ -46,8 +46,9 @@ The circuit's public inputs mirror the on-chain `Verdict`: `agent_id`, `domain_i
 
 - [x] allowlist membership + action-commitment + nullifier obligations
 - [x] compiles on nargo 1.0.0-beta.25 (3795 gates), `nargo test` passes
-- [x] toolchain verified: `bb write_vk` generates a VK from the circuit (bb 5.1.0)
-- [ ] witness generator (build a valid allowlist tree + keccak commitment) → real proof
-- [ ] verify keccak preimage packing matches Solidity `PolicyAction.commit` byte-for-byte
-- [ ] wrap the generated `Verifier.sol` behind `IVerifier`, swap out `MockVerifier`
+- [x] toolchain verified: nargo 1.0.0-beta.25 + bb 5.1.0
+- [x] **real proof**: `Prover.example.toml` witness → `nargo execute` → `bb prove` → `bb verify` (verified)
+- [x] **keccak packing verified**: matches Solidity `PolicyAction.commit` byte-for-byte (`test/PackingCheck.t.sol`)
+- [x] **Solidity verifier generated**: `HonkVerifier` (keccak transcript), `verify(proof, bytes32[37])`
+- [ ] wire `HonkVerifier` behind `IVerifier` (map Verdict → 37 public inputs), swap out `MockVerifier`
 - [ ] Tokyo delta on top (Mandate: private accumulator, or CAPVand: multi-policy)

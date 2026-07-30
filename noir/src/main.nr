@@ -138,3 +138,26 @@ fn test_allow_verdict() {
         call_data_hash, action_nonce, index, path,
     );
 }
+
+// Prints the action commitment for fixed values so it can be cross-checked against Solidity
+// PolicyAction.commit (run: nargo test test_print_commit --show-output).
+#[test]
+fn test_print_commit() {
+    // chain_id=1, domain_id=42, agent_id=7, target=0x1234, value=0, call_data_hash=0, action_nonce=3
+    let commit = keccak256(abi_encode_policy_action(1, 42, 7, 0x1234, 0, 0, 3), 224);
+    println(commit);
+}
+
+// Prints the derived public witness values (policy_root, nullifier) so a valid Prover.toml can
+// be built for a real proof (run: nargo test test_print_witness --show-output).
+#[test]
+fn test_print_witness() {
+    let target: Field = 0x1234;
+    let leaf = std::hash::pedersen_hash([target]);
+    let policy_root = compute_merkle_root(leaf, 0, [0; TREE_DEPTH]);
+    let commit = keccak256(abi_encode_policy_action(1, 42, 7, target, 0, 0, 3), 224);
+    let (chi, clo) = bytes32_to_two_fields(commit);
+    let nullifier = std::hash::pedersen_hash([42, 7, chi, clo, 3]);
+    println(f"policy_root={policy_root}");
+    println(f"nullifier={nullifier}");
+}
