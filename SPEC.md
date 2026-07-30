@@ -2,7 +2,7 @@
 eip: <to be assigned>
 title: Confidential Agent Policy Verdicts
 description: A pre-execution allow/deny interface for agent actions, proven in zero knowledge against a policy never disclosed on-chain.
-author: Muhammad Zidan Fatonie (@mzf11125), Faisal Firdani (@zexoverz)
+author: Muhammad Zidan Fatonie (@mzf11125), Faisal Firdani (@zexoverz), Maulana Asykari Muhammad (@WeissCurry)
 discussions-to: <URL of the Ethereum Magicians thread — fill after opening the thread>
 status: Idea
 type: Standards Track
@@ -265,6 +265,10 @@ A guarded contract MUST expose `policyDomain()` and MUST call `consume` before d
 
 ## Rationale
 
+### Confidential-correct is orthogonal to public-recomputable
+
+This standard proves that a computation was performed correctly against a policy nobody can see. A different trust shape proves that a verdict is what it claims to be against inputs anyone can independently re-derive. These are orthogonal properties, not points on one spectrum: a deployment may want either, and a system that is ZK-provably-correct against a policy disclosed on a delay sits between them. This standard occupies only the confidential-correct corner and does not claim the public-recomputable one. The `mechanism` tag in the ERC-8004 attestation exists so the two are never conflated downstream.
+
 ### Why not extend ERC-8150
 
 [ERC-8150](./erc-8150.md) verifies that an agent's batch matches an intent the **user signed**. The user knows the intent, because they wrote it. There is nothing to hide from them and no policy to commit to.
@@ -392,7 +396,7 @@ This ERC requires [ERC-7812](./erc-7812.md) (Review), [ERC-8004](./erc-8004.md),
 
 ## Acknowledgements
 
-Thanks to the reviewers on the [Ethereum Magicians thread](https://ethereum-magicians.org/t/draft-idea-confidential-agent-policy-verdicts/29088) whose feedback shaped the ERC-8004 attestation design: **@babyblueviper1** (the `artifactHash` content-addressed reference and the `mechanism` source-class tag, and the framing that confidential-correct and public-recomputable are orthogonal properties) and **@WeissCurry** (the Validation-Registry composability mapping across the identity/evidence/mandate/verdict scopes).
+Thanks to @babyblueviper1 on the [Ethereum Magicians thread](https://ethereum-magicians.org/t/draft-idea-confidential-agent-policy-verdicts/29088) for feedback that shaped the ERC-8004 attestation design: the `artifactHash` content-addressed reference to the specific action judged, the `mechanism` source-class tag, and the framing that confidential-correct and public-recomputable are orthogonal properties.
 
 ## Copyright
 

@@ -88,7 +88,7 @@ This is experimental software provided on an "as is" basis. It has not been audi
 
 ## Acknowledgements
 
-Feedback from @babyblueviper1 (the `artifactHash` and `mechanism` fields for the ERC-8004 handoff) and @WeissCurry (the Validation Registry composability mapping) shaped the attestation design. Acknowledgement, not authorship.
+Feedback from @babyblueviper1 on the Ethereum Magicians thread shaped the ERC-8004 attestation design: the `artifactHash` and `mechanism` fields, and the confidential-correct vs public-recomputable framing.
 
 ## License
 
