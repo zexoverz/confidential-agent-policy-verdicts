@@ -1,101 +1,95 @@
-# Confidential Agent Policy Verdicts — Reference Implementation
+# Confidential Agent Policy Verdicts
 
-Reference implementation of the draft ERC **Confidential Agent Policy Verdicts**: a
-pre-execution allow/deny verdict on an autonomous agent's action, proven in zero-knowledge
-against a policy that is *committed to but never disclosed on-chain*.
+Reference implementation of the draft ERC. A pre-execution allow/deny verdict on an agent action, proven in zero knowledge against a policy that is committed to but never revealed on-chain.
 
-- Spec (working draft, shared source before the ethereum/EIPs PR): [SPEC.md](./SPEC.md)
-- Discussion: [Ethereum Magicians thread](https://ethereum-magicians.org/t/draft-idea-confidential-agent-policy-verdicts/29088)
-- Builds on ERC-8004 (agent identity) and ERC-7812 (evidence registry).
+Spec: [SPEC.md](./SPEC.md). Discussion: [Ethereum Magicians](https://ethereum-magicians.org/t/draft-idea-confidential-agent-policy-verdicts/29088). Builds on ERC-8004 (identity) and ERC-7812 (evidence registry).
 
-> Status: **draft / work in progress.** The Solidity guard, registry, and Test Cases suite are
-> complete and passing; the SP1 proving program is a documented skeleton, not a finished circuit.
+## Overview
 
-## What's here
+An off-chain policy engine evaluates an agent's proposed action against a secret ruleset and produces a proof. A guard contract verifies that proof and gates execution on it, without the policy ever appearing on-chain. This repo has the interfaces, a Solidity guard and companion registry, an example consumer, and a Foundry test suite. The SP1 proving program is a documented skeleton, not a finished circuit.
 
-| Path | What |
-|------|------|
-| `src/IConfidentialPolicyVerdict.sol` | Normative core: the `Verdict` struct + Guard interface |
-| `src/IPolicyDomainRegistry.sol` | Recommended companion registry interface |
-| `src/IVerifier.sol` | ZK proof verifier interface (`programKey` + public inputs + proof) |
-| `src/ConfidentialPolicyVerdict.sol` | **The Guard** — `verify` / `consume` / `isConsumed`, checks in spec order |
-| `src/PolicyDomainRegistry.sol` | Concrete registry: domains, root rotation with grace, immediate revocation |
-| `src/GuardedExecutor.sol` | Example: recompute `actionCommitment` (binds chainid + nonce) → consume → execute |
-| `src/IPolicyAttestation.sol` | ERC-8004 Validation Registry handoff: `VerdictAttestation` schema (`artifactHash` + `mechanism` tag) |
-| `src/mocks/MockVerifier.sol` · `MockValidationRegistry.sol` | Test doubles |
-| `test/ConfidentialPolicyVerdict.t.sol` | The spec's Test Cases as a Foundry suite (19 cases) |
-| `sp1/` | Interpreter proving-program skeleton (the load-bearing "fixed interpreter") |
-
-## Build & test
+## Installation
 
 ```bash
-git submodule update --init --recursive   # pulls forge-std (or: forge install)
-forge build
-forge test -vvv
+forge install foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts
 ```
 
-Requires [Foundry](https://book.getfoundry.sh/getting-started/installation). Tested with
-forge 1.5.1, Solc 0.8.28 — the suite is 19/19 green.
+## Usage
 
-## How it fits together
+A contract gated by a verdict recomputes the action commitment, consumes the verdict, then executes. Consuming reverts unless the verdict is for this domain, decides ALLOW, is authorized for the caller, is unexpired, is unused, sits on an accepted policy root, and carries a valid proof.
 
-`consume(Verdict, proof)` runs seven checks in this exact order, and reverts on the first failure:
+```solidity
+import {IConfidentialPolicyVerdict, Verdict} from "./src/IConfidentialPolicyVerdict.sol";
+import {PolicyAction, PolicyActionLib} from "./src/PolicyAction.sol";
 
-1. domain is active
-2. `decision == ALLOW`
-3. `executor == msg.sender`
-4. verdict not expired
-5. verdict not already consumed (nullifier unseen)
-6. `policyRoot` currently acceptable for the domain
-7. proof verifies
+contract Gated {
+    using PolicyActionLib for PolicyAction;
+    IConfidentialPolicyVerdict immutable guard;
+    bytes32 immutable domainId;
 
-On success it records the nullifier and emits `VerdictConsumed`. `verify()` is the view-only
-counterpart and wraps the verifier in try/catch, so a *malformed* proof returns `false` rather
-than reverting — while `consume` reverts `InvalidProof`.
+    constructor(IConfidentialPolicyVerdict g, bytes32 d) { guard = g; domainId = d; }
 
-The verifier sits behind `IVerifier.verifyProof(programKey, publicInputs, proof)`, keeping the
-guard proving-system agnostic (SP1 / Groth16 / RISC0 all slot in behind the same call).
+    function run(Verdict calldata v, bytes calldata proof, address to, uint256 nonce, bytes calldata data)
+        external
+    {
+        bytes32 commitment = PolicyAction({
+            chainId: block.chainid, domainId: domainId, agentId: v.agentId,
+            target: to, value: 0, callDataHash: keccak256(data), actionNonce: nonce
+        }).commit();
+        require(commitment == v.actionCommitment, "wrong action");
 
-The guard is **ERC-165** discoverable. The `IConfidentialPolicyVerdict` interfaceId is **`0x6c832e88`**
-(XOR of its five function selectors — `verify`, `verdictDigest`, both `consume` overloads, and
-`isConsumed`; the inherited `IERC165.supportsInterface` is excluded, per Solidity's `type().interfaceId`).
+        guard.consume(v, proof);           // burns the nullifier, reverts on any failed check
+        (bool ok,) = to.call(data);
+        require(ok, "call failed");
+    }
+}
+```
 
-## Design decisions
+See `src/GuardedExecutor.sol` for the full example, including the EIP-712 signed-relay path.
 
-Two questions were raised on the Magicians thread and resolved there; this implementation reflects
-the resolution:
+## Contracts
 
-1. **Action-binding — canonical commitment.** `consume` receives a `Verdict` (with
-   `actionCommitment`) but not the action params, so it cannot recompute the commitment itself. The
-   standard fixes a **canonical action preimage** (`src/PolicyAction.sol`) that both the guarded
-   contract and the proving program hash byte-for-byte — the guard stays a minimal verdict
-   primitive, but the commitment is no longer per-integrator. The preimage is domain-separated
-   (`chainId` + `domainId`) to block cross-chain / cross-domain replay. Modelled on ERC-4337's
-   canonical UserOperation hash.
-2. **Executor — cryptographic binding, not positional.** `consume` still succeeds for direct
-   submission (`msg.sender == v.executor`), but a relayer may submit on the executor's behalf by
-   presenting an **EIP-712 signature** by `v.executor` over `verdictDigest(v)` — verified with
-   `SignatureChecker`, so a **smart-contract account (ERC-1271)** executor works too. The verdict's
-   single-use nullifier gives the signature replay protection for free. Because the action is
-   committed *and* the executor is bound by signature, front-running the submission is neutral:
-   any submitter causes the identical committed execution.
-3. **ERC-8004 attestation handoff (`src/IPolicyAttestation.sol`).** A consumed verdict can be
-   recorded to ERC-8004's Validation Registry so a local pre-execution permission becomes part of
-   the agent's public compliance record. The payload carries two deliberate fields: `artifactHash`
-   (== `actionCommitment`, a content-addressed ref to the *specific* action judged, not a class) and
-   `mechanism` (a source-class tag — `keccak256("zk-secret-policy")` — so a ZK-against-secret-policy
-   verdict is not silently conflated with a self-attested or public-recomputable one downstream).
-   The Guard stays minimal; the handoff is RECOMMENDED, done by the guarded contract/adapter.
+```
+src
+├─ IConfidentialPolicyVerdict.sol  the Verdict struct and Guard interface (normative core)
+├─ ConfidentialPolicyVerdict.sol   the Guard: verify / consume / isConsumed
+├─ PolicyAction.sol                canonical action commitment, domain-separated by chainId + domainId
+├─ IPolicyDomainRegistry.sol       companion registry interface (recommended)
+├─ PolicyDomainRegistry.sol        registry: domains, root rotation with grace, immediate revocation
+├─ IVerifier.sol                   proof verifier interface (SP1 / Groth16 / RISC0 slot in behind it)
+├─ IPolicyAttestation.sol          ERC-8004 Validation Registry handoff schema
+├─ GuardedExecutor.sol             example consumer
+└─ mocks/                          test doubles
+sp1/                               proving-program skeleton
+```
+
+## Design notes
+
+The Guard is a minimal verdict primitive. It never sees the action parameters, so the action is bound by a canonical commitment in `PolicyAction.sol` that both the guarded contract and the proving program hash the same way. The preimage includes `chainId` and `domainId`, so a commitment cannot be replayed across chains or domains.
+
+The executor is bound by signature, not by position. `consume` accepts direct submission when `msg.sender == v.executor`, or a relayed submission carrying an EIP-712 signature by `v.executor` over `verdictDigest(v)`. Signatures are checked with `SignatureChecker`, so an ERC-1271 account works as an executor. The single-use nullifier gives the signature replay protection.
+
+A consumed verdict can be recorded to ERC-8004's Validation Registry via the `VerdictAttestation` schema in `IPolicyAttestation.sol`. The payload carries `artifactHash` (the action commitment) and a `mechanism` tag set to `keccak256("zk-secret-policy")`, so this verdict is not conflated with a self-attested or publicly recomputable one in a shared registry.
+
+The Guard supports ERC-165. The `IConfidentialPolicyVerdict` interfaceId is `0x6c832e88`.
+
+## Testing
+
+```bash
+git submodule update --init --recursive
+forge test
+```
+
+19 tests, the spec's Test Cases as an executable suite.
+
+## Safety
+
+This is experimental software provided on an "as is" basis. It has not been audited, and the SP1 proving program is a skeleton rather than a working circuit. There are invariants these contracts expect to hold that are not all enforced yet. Do not use it in production. Run your own tests and get an audit before relying on any of it.
 
 ## Acknowledgements
 
-Thanks to the Ethereum Magicians reviewers whose feedback shaped the design: **@babyblueviper1**
-(the `artifactHash` + source-class `mechanism` framing for the ERC-8004 handoff, and the
-"confidential-correct vs public-recomputable are orthogonal" framing) and **@WeissCurry** (the
-Validation-Registry composability mapping). Acknowledgement, not authorship — the reference impl and
-standard remain authored by the CAPV team.
+Feedback from @babyblueviper1 (the `artifactHash` and `mechanism` fields for the ERC-8004 handoff) and @WeissCurry (the Validation Registry composability mapping) shaped the attestation design. Acknowledgement, not authorship.
 
 ## License
 
-Released under [CC0-1.0](./LICENSE) — no rights reserved, matching EIP reference-implementation
-convention.
+[CC0-1.0](./LICENSE).
