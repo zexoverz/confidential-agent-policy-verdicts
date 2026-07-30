@@ -39,6 +39,7 @@ The circuit's public inputs mirror the on-chain `Verdict`: `agent_id`, `domain_i
 ## Status
 
 - [x] allowlist membership + action-commitment + nullifier obligations
+- [x] compiles on nargo 1.0.0-beta.25 (3795 gates) and `nargo test` passes (valid witness satisfies all four)
 - [ ] verify keccak preimage packing matches Solidity byte-for-byte
 - [ ] wrap the generated verifier behind `IVerifier` + swap out `MockVerifier`
 - [ ] Tokyo delta on top of this (Mandate: private accumulator, or CAPVand: multi-policy)

@@ -108,3 +108,33 @@ fn bytes32_to_two_fields(b: [u8; 32]) -> (Field, Field) {
     }
     (hi, lo)
 }
+
+// Builds a fully self-consistent valid witness with the circuit's own helpers and runs main.
+// If the four obligations are internally consistent, this passes.
+#[test]
+fn test_allow_verdict() {
+    let target: Field = 0x1234;
+    let index: Field = 0;
+    let path: [Field; TREE_DEPTH] = [0; TREE_DEPTH];
+    let leaf = std::hash::pedersen_hash([target]);
+    let policy_root = compute_merkle_root(leaf, index, path);
+
+    let chain_id: Field = 1;
+    let domain_id: Field = 42;
+    let agent_id: Field = 7;
+    let value: Field = 0;
+    let call_data_hash: Field = 0;
+    let action_nonce: Field = 3;
+
+    let commit = keccak256(
+        abi_encode_policy_action(chain_id, domain_id, agent_id, target, value, call_data_hash, action_nonce),
+        224,
+    );
+    let (chi, clo) = bytes32_to_two_fields(commit);
+    let nullifier = std::hash::pedersen_hash([domain_id, agent_id, chi, clo, action_nonce]);
+
+    main(
+        agent_id, domain_id, policy_root, commit, nullifier, 1, chain_id, target, value,
+        call_data_hash, action_nonce, index, path,
+    );
+}
