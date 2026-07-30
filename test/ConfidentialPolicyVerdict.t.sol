@@ -8,6 +8,8 @@ import {PolicyDomainRegistry} from "../src/PolicyDomainRegistry.sol";
 import {IConfidentialPolicyVerdict, Verdict} from "../src/IConfidentialPolicyVerdict.sol";
 import {MockVerifier} from "../src/mocks/MockVerifier.sol";
 import {GuardedExecutor} from "../src/GuardedExecutor.sol";
+import {PolicyAttestation, VerdictAttestation} from "../src/IPolicyAttestation.sol";
+import {MockValidationRegistry} from "../src/mocks/MockValidationRegistry.sol";
 
 /// @notice Minimal call target for GuardedExecutor tests.
 contract Sink {
@@ -249,5 +251,27 @@ contract CAPVTest is Test {
     // Emit the canonical interfaceId (run with -vv) so it can be recorded in the docs/spec.
     function test_LogInterfaceId() public pure {
         console2.logBytes4(type(IConfidentialPolicyVerdict).interfaceId);
+    }
+
+    // --- ERC-8004 Validation Registry handoff (attestation schema) ---
+
+    // 18. A consumed verdict produces a well-formed attestation: artifactHash == actionCommitment,
+    //     mechanism tagged as zk-secret-policy, written to the (mock) 8004 Validation Registry.
+    function test_VerdictAttestationHandoff() public {
+        Verdict memory v = _verdict();
+        vm.prank(EXECUTOR);
+        guard.consume(v, "proof");
+
+        // A guarded contract / adapter builds the canonical attestation and writes it to ERC-8004.
+        VerdictAttestation memory att = PolicyAttestation.attestationFor(v);
+        MockValidationRegistry vr = new MockValidationRegistry();
+        vr.recordVerdict(att);
+
+        VerdictAttestation memory got = vr.get(v.agentId, v.nullifier);
+        assertEq(got.artifactHash, v.actionCommitment, "artifactHash must be the action commitment");
+        assertEq(got.mechanism, keccak256("zk-secret-policy"), "mechanism must be tagged");
+        assertEq(got.policyRoot, v.policyRoot);
+        assertEq(uint256(got.decision), 1);
+        assertEq(got.agentId, v.agentId);
     }
 }

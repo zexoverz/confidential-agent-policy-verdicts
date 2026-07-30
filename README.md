@@ -20,8 +20,9 @@ against a policy that is *committed to but never disclosed on-chain*.
 | `src/ConfidentialPolicyVerdict.sol` | **The Guard** — `verify` / `consume` / `isConsumed`, checks in spec order |
 | `src/PolicyDomainRegistry.sol` | Concrete registry: domains, root rotation with grace, immediate revocation |
 | `src/GuardedExecutor.sol` | Example: recompute `actionCommitment` (binds chainid + nonce) → consume → execute |
-| `src/mocks/MockVerifier.sol` | Test double for the verifier |
-| `test/ConfidentialPolicyVerdict.t.sol` | The spec's Test Cases as a Foundry suite (10 cases) |
+| `src/IPolicyAttestation.sol` | ERC-8004 Validation Registry handoff: `VerdictAttestation` schema (`artifactHash` + `mechanism` tag) |
+| `src/mocks/MockVerifier.sol` · `MockValidationRegistry.sol` | Test doubles |
+| `test/ConfidentialPolicyVerdict.t.sol` | The spec's Test Cases as a Foundry suite (19 cases) |
 | `sp1/` | Interpreter proving-program skeleton (the load-bearing "fixed interpreter") |
 
 ## Build & test
@@ -77,6 +78,21 @@ the resolution:
    single-use nullifier gives the signature replay protection for free. Because the action is
    committed *and* the executor is bound by signature, front-running the submission is neutral:
    any submitter causes the identical committed execution.
+3. **ERC-8004 attestation handoff (`src/IPolicyAttestation.sol`).** A consumed verdict can be
+   recorded to ERC-8004's Validation Registry so a local pre-execution permission becomes part of
+   the agent's public compliance record. The payload carries two deliberate fields: `artifactHash`
+   (== `actionCommitment`, a content-addressed ref to the *specific* action judged, not a class) and
+   `mechanism` (a source-class tag — `keccak256("zk-secret-policy")` — so a ZK-against-secret-policy
+   verdict is not silently conflated with a self-attested or public-recomputable one downstream).
+   The Guard stays minimal; the handoff is RECOMMENDED, done by the guarded contract/adapter.
+
+## Acknowledgements
+
+Thanks to the Ethereum Magicians reviewers whose feedback shaped the design: **@babyblueviper1**
+(the `artifactHash` + source-class `mechanism` framing for the ERC-8004 handoff, and the
+"confidential-correct vs public-recomputable are orthogonal" framing) and **@WeissCurry** (the
+Validation-Registry composability mapping). Acknowledgement, not authorship — the reference impl and
+standard remain authored by the CAPV team.
 
 ## License
 
