@@ -34,7 +34,7 @@ forge test -vvv
 ```
 
 Requires [Foundry](https://book.getfoundry.sh/getting-started/installation). Tested with
-forge 1.5.1, Solc 0.8.28 — the suite is 10/10 green.
+forge 1.5.1, Solc 0.8.28 — the suite is 19/19 green.
 
 ## How it fits together
 
