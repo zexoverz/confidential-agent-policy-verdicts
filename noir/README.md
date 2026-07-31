@@ -36,11 +36,11 @@ bb verify  -k target/vk -p target/proof
 bb write_solidity_verifier -k target/vk -o target/Verifier.sol
 ```
 
-`Verifier.sol` is an UltraHonk Solidity verifier, checked in at `src/verifier/HonkVerifier.sol`. `src/HonkVerifierAdapter.sol` wraps it to implement the ERC's `IVerifier.verifyProof(programKey, publicInputs, proof)`: it decodes the `Verdict`, serializes the 37 public inputs, and calls the verifier. Register the adapter as a domain's verifier in `PolicyDomainRegistry` in place of `MockVerifier`.
+`Verifier.sol` is an UltraHonk Solidity verifier, checked in at `src/verifier/HonkVerifier.sol`. `src/HonkVerifierAdapter.sol` wraps it to implement the ERC's `IVerifier.verifyProof(programKey, publicInputs, proof)`: it decodes the `Verdict`, serializes the 38 public inputs, and calls the verifier. Register the adapter as a domain's verifier in `PolicyDomainRegistry` in place of `MockVerifier`.
 
 ## Public input layout
 
-The circuit's public inputs mirror the on-chain `Verdict`: `agent_id`, `domain_id`, `policy_root`, `action_commitment` (`[u8; 32]`), `nullifier`, `decision`. The wrapper must feed them in the order the verifier expects.
+The circuit's public inputs mirror the on-chain `Verdict`: `agent_id`, `domain_id`, `policy_root`, `action_commitment` (`[u8; 32]`), `nullifier`, `decision`, `executor`. The wrapper must feed them in the order the verifier expects. `executor` is a committed public input so the proof binds to the address permitted to consume it (spec Security Considerations); `expiry` stays Guard-only.
 
 ## Status
 
@@ -49,6 +49,7 @@ The circuit's public inputs mirror the on-chain `Verdict`: `agent_id`, `domain_i
 - [x] toolchain verified: nargo 1.0.0-beta.25 + bb 5.1.0
 - [x] **real proof**: `Prover.example.toml` witness → `nargo execute` → `bb prove` → `bb verify` (verified)
 - [x] **keccak packing verified**: matches Solidity `PolicyAction.commit` byte-for-byte (`test/PackingCheck.t.sol`)
-- [x] **Solidity verifier generated**: `HonkVerifier` (keccak transcript), `verify(proof, bytes32[37])`
-- [x] **wired behind `IVerifier`**: `HonkVerifierAdapter` maps Verdict → 37 public inputs; real proof verifies on-chain and through the Guard's `consume` (`test/ConsumeReal.t.sol`)
+- [x] **Solidity verifier generated**: `HonkVerifier` (keccak transcript, `-t evm`), `verify(proof, bytes32[38])`
+- [x] **wired behind `IVerifier`**: `HonkVerifierAdapter` maps Verdict → 38 public inputs; real proof verifies on-chain and through the Guard's `consume` (`test/ConsumeReal.t.sol`)
+- [x] **executor bound in-circuit**: `executor` is a committed public input; a proof checked against a different executor is rejected (`test/AdapterVerify.t.sol::test_proof_rejects_wrong_executor`)
 - [ ] Tokyo delta on top (Mandate: private accumulator, or CAPVand: multi-policy)

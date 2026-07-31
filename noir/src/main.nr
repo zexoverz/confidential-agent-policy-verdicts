@@ -4,11 +4,14 @@
 //! committed on-chain (as `policy_root`) but never revealed. The v1 policy is an
 //! allowlist: the action's target must be a member of a committed Merkle tree.
 //!
-//! Four in-circuit obligations (mirror the ERC spec):
+//! Five in-circuit obligations (mirror the ERC spec):
 //!   1. decision == ALLOW (this circuit only proves ALLOW verdicts).
 //!   2. policy membership: `target` is a leaf in the allowlist whose root == `policy_root`.
 //!   3. action commitment: keccak over the canonical PolicyAction preimage == `action_commitment`.
 //!   4. nullifier: derived from (domain, agent, commitment, nonce) == `nullifier`.
+//!   5. executor binding: `executor` is a committed public input, so the proof is bound to the
+//!      address permitted to consume it. The spec's Security Considerations require this to be
+//!      enforced in-circuit, not only as a msg.sender check in the Guard.
 //!
 //! Notes for whoever runs this:
 //!  - `action_commitment` is a full 256-bit keccak, so it is a public `[u8; 32]`, not a Field
@@ -32,6 +35,7 @@ fn main(
     action_commitment: pub [u8; 32], // = keccak(PolicyAction), full 256 bits
     nullifier: pub Field,
     decision: pub u8, // 1 = ALLOW
+    executor: pub Field, // address permitted to consume; committed so the proof binds to it
     // ---- private witness ----
     chain_id: Field,
     target: Field, // call target address as an integer
@@ -43,6 +47,10 @@ fn main(
 ) {
     // 1. ALLOW only
     assert(decision == 1);
+
+    // 5. Executor binding: executor is a committed public input (bound to the proof). It must be a
+    // real address; the verifier will only accept the proof against this exact executor value.
+    assert(executor != 0);
 
     // 2. Policy membership: recompute the allowlist root from the leaf and assert it matches.
     let leaf = std::hash::pedersen_hash([target]);
@@ -132,9 +140,10 @@ fn test_allow_verdict() {
     );
     let (chi, clo) = bytes32_to_two_fields(commit);
     let nullifier = std::hash::pedersen_hash([domain_id, agent_id, chi, clo, action_nonce]);
+    let executor: Field = 0xE0; // matches ConsumeReal.t.sol executor address(0xE0)
 
     main(
-        agent_id, domain_id, policy_root, commit, nullifier, 1, chain_id, target, value,
+        agent_id, domain_id, policy_root, commit, nullifier, 1, executor, chain_id, target, value,
         call_data_hash, action_nonce, index, path,
     );
 }

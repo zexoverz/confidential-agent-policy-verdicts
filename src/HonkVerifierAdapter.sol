@@ -12,10 +12,11 @@ interface IHonkVerifier {
 /// @notice Adapts the Noir/UltraHonk allowlist verifier to the ERC's `IVerifier`. It serializes the
 /// Verdict fields that are the circuit's public inputs and calls the generated Honk verifier.
 ///
-/// The circuit's public inputs, in `main()` order, are 37 elements:
+/// The circuit's public inputs, in `main()` order, are 38 elements:
 ///   [0] agentId, [1] domainId, [2] policyRoot, [3..34] the 32 bytes of actionCommitment
-///   (each byte as a field element), [35] nullifier, [36] decision.
-/// `executor` and `expiry` are NOT circuit inputs — the Guard enforces them on-chain.
+///   (each byte as a field element), [35] nullifier, [36] decision, [37] executor.
+/// `executor` is now a committed circuit input (the proof binds to it, per the spec's Security
+/// Considerations). `expiry` is NOT a circuit input — the Guard enforces it on-chain.
 contract HonkVerifierAdapter is IVerifier {
     IHonkVerifier public immutable honk;
 
@@ -40,7 +41,7 @@ contract HonkVerifierAdapter is IVerifier {
 
     /// @notice The 37-element public-input vector the circuit expects, from a Verdict.
     function _toPublicInputs(Verdict memory v) internal pure returns (bytes32[] memory pi) {
-        pi = new bytes32[](37);
+        pi = new bytes32[](38);
         pi[0] = bytes32(v.agentId);
         pi[1] = v.domainId;
         pi[2] = v.policyRoot;
@@ -49,5 +50,6 @@ contract HonkVerifierAdapter is IVerifier {
         }
         pi[35] = v.nullifier;
         pi[36] = bytes32(uint256(v.decision));
+        pi[37] = bytes32(uint256(uint160(v.executor)));
     }
 }
