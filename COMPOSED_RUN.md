@@ -34,17 +34,39 @@ forge test --match-contract ComposedLiveRun -vvv
 `IProofVerifier` here is exactly ERC-8274's:
 `verify(bytes32 inputHash, bytes32 outputHash, bytes metadata, bytes proof) returns (bool)`.
 
-## Binding the two to the same action (last step, together)
+## The CAPV leg is already bound to the t/28083 #150 action
 
-The CAPV half above runs the reference witness, so both layers execute but the verdict is not yet
-bound to your inference's output. To make it one coherent action:
+You published a real action tuple and a signed `/review` verdict in the ERC-8274 thread (post #150).
+The CAPV side is now bound to those exact bytes, so this is no longer "ping me for a proof" — the
+proof exists and consumes on-chain today:
 
-1. We agree on the action the agent takes from the inference output (target, value, calldata, nonce).
-2. I issue a CAPV proof whose `actionCommitment` is the canonical `PolicyAction` commitment over that
-   action (this is the byte-for-byte hash the circuit and the EVM both compute).
-3. Swap the fixture proof and `Verdict` in `ComposedLiveRun` for that one. Nothing else changes.
+```bash
+forge test --match-test test_capv_leg_binds_babyblue_action -vv
+```
 
-Then it is one flow: your ERC-8274 verifier attests the inference, and CAPV attests the resulting
-action clears a confidential allowlist, with the nullifier burned so the verdict is one-time.
+That test needs no env and no fork. It registers the run's domain, then consumes a real CAPV proof whose
+`actionCommitment` is the canonical `PolicyAction` commitment over your tuple, burning the nullifier.
 
-Ping me with the action bytes and I will turn around the CAPV proof.
+The bound values (Sepolia Multicall3 `aggregate3([])`, `actionNonce` 5, `executor`
+`0x1C21…9093`, `agentId` 54848):
+
+| field | value |
+|-------|-------|
+| `domainId` | `0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0` (your proposed `keccak256("erc8274-t28083-composed-live-run")`) |
+| `policyRoot` | `0x204a14dc3ab2fdead5450192caea7428c2751b53a95b57d22f93cccb61af19a8` (allowlist of one entry: the Multicall3 target; the policy itself never goes on-chain) |
+| `actionCommitment` | `0x5b5ec31c336cc8f95dc6d9025d1d008c6ed2cd5067b9c421b1d36927e230173a` |
+| `nullifier` | `0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f` |
+
+Reproduce `actionCommitment` yourself:
+`cast keccak $(cast abi-encode "f(uint256,bytes32,uint256,address,uint256,bytes32,uint256)" 11155111 0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0 54848 0xcA11bde05977b3631167028862bE2a173976CA11 0 0xcfacbfe211cf3be67a1d64a6499a2af0ae475e2c0965c2a42f969d243df2b6cd 5)`
+
+Binding a full 256-bit `callDataHash` (yours is `0xcfac…`, larger than the BN254 field) needed a circuit
+fix: `callDataHash` now enters the proving program as raw bytes, not a field element. Public inputs are
+unchanged, so the `Verdict` envelope, the adapter, and the 38-input layout are identical.
+
+## Both legs on one flow
+
+`test_live_erc8274_plus_capv` in `ComposedLiveRun.t.sol` binds the ERC-8274 leg to the same tuple. Point
+it at your deployed verifier and it forks your chain, verifies your inference proof, then consumes the
+CAPV verdict above. Then all three verdicts (CAPV confidential, your `/review`, TMerlini's `recompute`)
+present through the same `IProofVerifier` boundary and land on `/ledger`, checkable against one socket.

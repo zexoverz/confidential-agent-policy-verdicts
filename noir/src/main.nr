@@ -40,7 +40,7 @@ fn main(
     chain_id: Field,
     target: Field, // call target address as an integer
     value: Field,
-    call_data_hash: Field, // keccak(callData), precomputed off-circuit
+    call_data_hash: [u8; 32], // keccak(callData): a full 256-bit digest, which a BN254 Field cannot hold
     action_nonce: Field,
     index: Field, // leaf index of `target` in the allowlist
     path: [Field; TREE_DEPTH], // sibling hashes bottom-to-top
@@ -91,16 +91,25 @@ fn abi_encode_policy_action(
     agent_id: Field,
     target: Field,
     value: Field,
-    call_data_hash: Field,
+    call_data_hash: [u8; 32],
     action_nonce: Field,
 ) -> [u8; 224] {
-    let words = [chain_id, domain_id, agent_id, target, value, call_data_hash, action_nonce];
+    // Words 0..5 and word 6 are Field-sized values. Word 5 (callDataHash) is a full 256-bit keccak
+    // digest that routinely exceeds the BN254 field, so it enters as raw bytes and is copied verbatim.
+    let field_words = [chain_id, domain_id, agent_id, target, value];
     let mut out: [u8; 224] = [0; 224];
-    for w in 0..7 {
-        let be: [u8; 32] = words[w].to_be_bytes(); // 32-byte big-endian word
+    for w in 0..5 {
+        let be: [u8; 32] = field_words[w].to_be_bytes(); // 32-byte big-endian word
         for b in 0..32 {
             out[w * 32 + b] = be[b];
         }
+    }
+    for b in 0..32 {
+        out[5 * 32 + b] = call_data_hash[b]; // callDataHash, verbatim 32 bytes
+    }
+    let nonce_be: [u8; 32] = action_nonce.to_be_bytes();
+    for b in 0..32 {
+        out[6 * 32 + b] = nonce_be[b];
     }
     out
 }
@@ -131,7 +140,7 @@ fn test_allow_verdict() {
     let domain_id: Field = 42;
     let agent_id: Field = 7;
     let value: Field = 0;
-    let call_data_hash: Field = 0;
+    let call_data_hash: [u8; 32] = [0; 32];
     let action_nonce: Field = 3;
 
     let commit = keccak256(
@@ -153,7 +162,7 @@ fn test_allow_verdict() {
 #[test]
 fn test_print_commit() {
     // chain_id=1, domain_id=42, agent_id=7, target=0x1234, value=0, call_data_hash=0, action_nonce=3
-    let commit = keccak256(abi_encode_policy_action(1, 42, 7, 0x1234, 0, 0, 3), 224);
+    let commit = keccak256(abi_encode_policy_action(1, 42, 7, 0x1234, 0, [0; 32], 3), 224);
     println(commit);
 }
 
@@ -164,9 +173,36 @@ fn test_print_witness() {
     let target: Field = 0x1234;
     let leaf = std::hash::pedersen_hash([target]);
     let policy_root = compute_merkle_root(leaf, 0, [0; TREE_DEPTH]);
-    let commit = keccak256(abi_encode_policy_action(1, 42, 7, target, 0, 0, 3), 224);
+    let commit = keccak256(abi_encode_policy_action(1, 42, 7, target, 0, [0; 32], 3), 224);
     let (chi, clo) = bytes32_to_two_fields(commit);
     let nullifier = std::hash::pedersen_hash([42, 7, chi, clo, 3]);
     println(f"policy_root={policy_root}");
     println(f"nullifier={nullifier}");
+}
+
+// Prints the witness values for the ERC-8274 composed live-run fixture (t/28083 post #150):
+// Sepolia Multicall3 aggregate3([]) call, real registered agentId, babyblue's action tuple.
+// Allowlist of one entry: the Multicall3 target. (run: nargo test test_print_witness_composed --show-output)
+#[test]
+fn test_print_witness_composed() {
+    let target: Field = 0xcA11bde05977b3631167028862bE2a173976CA11;
+    let leaf = std::hash::pedersen_hash([target]);
+    let policy_root = compute_merkle_root(leaf, 0, [0; TREE_DEPTH]);
+    let chain_id: Field = 11155111;
+    let domain_id: Field = 0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0;
+    let agent_id: Field = 54848;
+    let action_nonce: Field = 5;
+    let call_data_hash: [u8; 32] = [
+        0xcf, 0xac, 0xbf, 0xe2, 0x11, 0xcf, 0x3b, 0xe6, 0x7a, 0x1d, 0x64, 0xa6, 0x49, 0x9a, 0x2a, 0xf0,
+        0xae, 0x47, 0x5e, 0x2c, 0x09, 0x65, 0xc2, 0xa4, 0x2f, 0x96, 0x9d, 0x24, 0x3d, 0xf2, 0xb6, 0xcd,
+    ];
+    let commit = keccak256(
+        abi_encode_policy_action(chain_id, domain_id, agent_id, target, 0, call_data_hash, action_nonce),
+        224,
+    );
+    let (chi, clo) = bytes32_to_two_fields(commit);
+    let nullifier = std::hash::pedersen_hash([domain_id, agent_id, chi, clo, action_nonce]);
+    println(f"policy_root={policy_root}");
+    println(f"nullifier={nullifier}");
+    println(commit);
 }
