@@ -33,10 +33,14 @@ bb verify  -k target/vk -p target/proof
 ## On-chain verifier
 
 ```bash
-bb write_solidity_verifier -k target/vk -o target/Verifier.sol
+bb write_solidity_verifier -k target/vk --optimized -o target/Verifier.sol
 ```
 
-`Verifier.sol` is an UltraHonk Solidity verifier, checked in at `src/verifier/HonkVerifier.sol`. `src/HonkVerifierAdapter.sol` wraps it to implement the ERC's `IVerifier.verifyProof(programKey, publicInputs, proof)`: it decodes the `Verdict`, serializes the 38 public inputs, and calls the verifier. Register the adapter as a domain's verifier in `PolicyDomainRegistry` in place of `MockVerifier`.
+`Verifier.sol` is an UltraHonk Solidity verifier, checked in at `src/verifier/HonkVerifier.sol`. It is
+generated with `--optimized` (the ZK-optimized template, `honk_zk_optimized`). On this circuit that is a
+71.5% verify-gas cut versus the default ZK verifier (2,564,863 to 731,348 gas) at smaller deployed
+bytecode (18,557 to 16,892 bytes), with the identical VK — the same proof verifies against both, so the
+full suite passes unchanged. Drop `--optimized` to fall back to the default ZK verifier. `src/HonkVerifierAdapter.sol` wraps it to implement the ERC's `IVerifier.verifyProof(programKey, publicInputs, proof)`: it decodes the `Verdict`, serializes the 38 public inputs, and calls the verifier. Register the adapter as a domain's verifier in `PolicyDomainRegistry` in place of `MockVerifier`.
 
 ## Public input layout
 
