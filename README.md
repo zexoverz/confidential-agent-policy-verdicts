@@ -95,16 +95,18 @@ The composed-run CAPV leg ([t/28083](https://ethereum-magicians.org/t/erc-8274-a
 
 | Contract | Sepolia address |
 |---|---|
-| HonkVerifierAdapter (`IVerifier`) | `0x99e980D105c98be0B2aDd2A5dC3A11182542904d` |
-| HonkVerifier (UltraHonk) | `0xd4C7003DEF87968E984090A81D354f32Cb1FEE97` |
-| ConfidentialPolicyVerdict (Guard) | `0x4ddE3E49B1Bc26C47BA97f23c07e28225EaB8bC0` |
-| PolicyDomainRegistry | `0x214506e0fdBd212a87cb0Eef220EdA8Fd4BC1116` |
+| HonkVerifierAdapter (`IVerifier`) | `0x630074dcACdC624b191026F0d611A6ee7aE002C2` |
+| HonkVerifier (UltraHonk, ZK-optimized) | `0x5119e10e29030e7c392de6296Ed320c34a16b7fA` |
+| ConfidentialPolicyVerdict (Guard) | `0x824A7b5A7C3767a4f6D678738395e3951DcE1A73` |
+| PolicyDomainRegistry | `0xdf5Bf6C89Fc54F9ea75f2BaE6E33227400A965bd` |
+
+These use the ZK-optimized verifier (−71.5% verify gas). An earlier deployment with the default ZK verifier (adapter `0x99e980D105c98be0B2aDd2A5dC3A11182542904d`) verifies the same proof against the same VK, so it remains valid as a composed-run reference.
 
 Verify the composed-run proof against the deployed adapter. It returns `true` with no local state and no trust in the author:
 
 ```bash
 RPC=https://ethereum-sepolia-rpc.publicnode.com
-ADAPTER=0x99e980D105c98be0B2aDd2A5dC3A11182542904d
+ADAPTER=0x630074dcACdC624b191026F0d611A6ee7aE002C2
 PROOF=0x$(xxd -p test/fixtures/composed_live.proof | tr -d '\n')
 PUB=$(cast abi-encode "f((uint256,bytes32,bytes32,bytes32,address,uint64,bytes32,uint8))" \
   "(54848,0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0,0x204a14dc3ab2fdead5450192caea7428c2751b53a95b57d22f93cccb61af19a8,0x5b5ec31c336cc8f95dc6d9025d1d008c6ed2cd5067b9c421b1d36927e230173a,0x1C213D41668e5bDe79AaEE2240c6f6Ad7b4c9093,1700003600,0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f,1)")
