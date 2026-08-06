@@ -53,6 +53,8 @@ See `src/GuardedExecutor.sol` for the full example, including the EIP-712 signed
 src
 ├─ IConfidentialPolicyVerdict.sol  the Verdict struct and Guard interface (normative core)
 ├─ ConfidentialPolicyVerdict.sol   the Guard: verify / consume / isConsumed
+├─ IProvableDenial.sol             optional provable-denial companion interface
+├─ ProvableDenialAnchor.sol        anchors a DENY: burns the nullifier against a denial record
 ├─ PolicyAction.sol                canonical action commitment, domain-separated by chainId + domainId
 ├─ IPolicyDomainRegistry.sol       companion registry interface (recommended)
 ├─ PolicyDomainRegistry.sol        registry: domains, root rotation with grace, immediate revocation
@@ -76,6 +78,8 @@ A consumed verdict can be recorded to ERC-8004's Validation Registry via the `Ve
 
 The Guard supports ERC-165. The `IConfidentialPolicyVerdict` interfaceId is `0x6c832e88`.
 
+A DENY verdict is never consumed, so under the core Guard a denial leaves no trace and evaluated-and-denied looks the same as never-evaluated. The optional `ProvableDenialAnchor` closes that for the confidential path: it takes a DENY verdict, verifies the same proof against the same domain program, and burns the nullifier against a separate denial record, leaving a `DenialAnchored` event. Same Verdict struct, same registry, the ALLOW path untouched.
+
 ## Testing
 
 ```bash
@@ -83,7 +87,32 @@ git submodule update --init --recursive
 forge test
 ```
 
-24 tests: the spec's Test Cases as an executable suite, plus keccak commitment parity against the Noir circuit, the real proof verifying on-chain through the adapter and through the Guard's `consume` (`ConsumeReal.t.sol`), and the executor binding (a proof checked against a different executor is rejected, `AdapterVerify.t.sol`).
+The spec's Test Cases as an executable suite, the provable-denial companion (`ProvableDenial.t.sol`), keccak commitment parity against the Noir circuit, the real proof verifying on-chain through the adapter and through the Guard's `consume` (`ConsumeReal.t.sol`), and the executor binding (a proof checked against a different executor is rejected, `AdapterVerify.t.sol`).
+
+## Deployed (Sepolia, ERC-8274 composed run)
+
+The composed-run CAPV leg ([t/28083](https://ethereum-magicians.org/t/erc-8274-ai-inference-proof-verification/28083)) is deployed to Sepolia so the proof is recompute-verifiable on-chain by anyone, not only in a local test.
+
+| Contract | Sepolia address |
+|---|---|
+| HonkVerifierAdapter (`IVerifier`) | `0x99e980D105c98be0B2aDd2A5dC3A11182542904d` |
+| HonkVerifier (UltraHonk) | `0xd4C7003DEF87968E984090A81D354f32Cb1FEE97` |
+| ConfidentialPolicyVerdict (Guard) | `0x4ddE3E49B1Bc26C47BA97f23c07e28225EaB8bC0` |
+| PolicyDomainRegistry | `0x214506e0fdBd212a87cb0Eef220EdA8Fd4BC1116` |
+
+Verify the composed-run proof against the deployed adapter. It returns `true` with no local state and no trust in the author:
+
+```bash
+RPC=https://ethereum-sepolia-rpc.publicnode.com
+ADAPTER=0x99e980D105c98be0B2aDd2A5dC3A11182542904d
+PROOF=0x$(xxd -p test/fixtures/composed_live.proof | tr -d '\n')
+PUB=$(cast abi-encode "f((uint256,bytes32,bytes32,bytes32,address,uint64,bytes32,uint8))" \
+  "(54848,0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0,0x204a14dc3ab2fdead5450192caea7428c2751b53a95b57d22f93cccb61af19a8,0x5b5ec31c336cc8f95dc6d9025d1d008c6ed2cd5067b9c421b1d36927e230173a,0x1C213D41668e5bDe79AaEE2240c6f6Ad7b4c9093,1700003600,0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f,1)")
+cast call $ADAPTER "verifyProof(bytes32,bytes,bytes)(bool)" \
+  0x0000000000000000000000000000000000000000000000000000000000000000 $PUB $PROOF --rpc-url $RPC
+```
+
+Redeploy with `forge script script/DeployComposedRun.s.sol --rpc-url <sepolia> --private-key <key> --broadcast`. This is a `verify`, not a `consume`: the composed-run verdict is bound to a fixed executor and expiry from the fixture, so the recompute-verifiable artifact is the deployed verifier plus the proof.
 
 ## Safety
 
