@@ -54,7 +54,8 @@ src
 ├─ IConfidentialPolicyVerdict.sol  the Verdict struct and Guard interface (normative core)
 ├─ ConfidentialPolicyVerdict.sol   the Guard: verify / consume / isConsumed
 ├─ IProvableDenial.sol             optional provable-denial companion interface
-├─ ProvableDenialAnchor.sol        anchors a DENY: burns the nullifier against a denial record
+├─ ProvableDenialAnchor.sol        anchors a DENY (confidential corner): ZK proof against the domain program
+├─ TransparentDenialAnchor.sol     anchors a DENY (transparent corner): recompute-and-compare, no secret
 ├─ PolicyAction.sol                canonical action commitment, domain-separated by chainId + domainId
 ├─ IPolicyDomainRegistry.sol       companion registry interface (recommended)
 ├─ PolicyDomainRegistry.sol        registry: domains, root rotation with grace, immediate revocation
@@ -78,7 +79,9 @@ A consumed verdict can be recorded to ERC-8004's Validation Registry via the `Ve
 
 The Guard supports ERC-165. The `IConfidentialPolicyVerdict` interfaceId is `0x6c832e88`.
 
-A DENY verdict is never consumed, so under the core Guard a denial leaves no trace and evaluated-and-denied looks the same as never-evaluated. The optional `ProvableDenialAnchor` closes that for the confidential path: it takes a DENY verdict, verifies the same proof against the same domain program, and burns the nullifier against a separate denial record, leaving a `DenialAnchored` event. Same Verdict struct, same registry, the ALLOW path untouched.
+A DENY verdict is never consumed, so under the core Guard a denial leaves no trace and evaluated-and-denied looks the same as never-evaluated. The anchor closes that gap, and it comes in two corners over the same `isDenied` surface. `ProvableDenialAnchor` is the confidential corner: it verifies a ZK proof against the domain program and burns the nullifier, revealing nothing about the policy. `TransparentDenialAnchor` is the transparent corner: the "proof" is the public `PolicyAction` preimage and anchoring is a recompute-and-compare, so anyone can reproduce the commitment from chain data with no secret involved. A recompute-denial verifier binds to either the same way. Same Verdict struct, the ALLOW path untouched.
+
+Note on the reference circuit: the allowlist circuit is ALLOW-only (`assert(decision == 1)`), so a confidential (ZK) DENY needs a dedicated denial circuit proving `decision == 0`; that is future work. The transparent corner needs no circuit and is live today.
 
 ## Testing
 
@@ -99,6 +102,9 @@ The composed-run CAPV leg ([t/28083](https://ethereum-magicians.org/t/erc-8274-a
 | HonkVerifier (UltraHonk, ZK-optimized) | `0x5119e10e29030e7c392de6296Ed320c34a16b7fA` |
 | ConfidentialPolicyVerdict (Guard) | `0x824A7b5A7C3767a4f6D678738395e3951DcE1A73` |
 | PolicyDomainRegistry | `0xdf5Bf6C89Fc54F9ea75f2BaE6E33227400A965bd` |
+| TransparentDenialAnchor (DENY, transparent corner) | `0xbAd0Befd720178b5fD3b5fB87c346A8131367bE1` |
+
+The transparent denial anchor holds the composed-run action anchored as a DENY under babyblue's canonical tuple, so `isDenied(0x16079127…afad0, 0x17f36ca0…0315f)` returns `true` on-chain and any unevaluated action returns `false` — the non-suppression trace, publicly recomputable by anyone. This closes the DENY board through the transparent corner (a confidential ZK DENY corner awaits a denial circuit).
 
 These use the ZK-optimized verifier (−71.5% verify gas). An earlier deployment with the default ZK verifier (adapter `0x99e980D105c98be0B2aDd2A5dC3A11182542904d`) verifies the same proof against the same VK, so it remains valid as a composed-run reference.
 
