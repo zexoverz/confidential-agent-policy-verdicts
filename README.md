@@ -103,8 +103,11 @@ The composed-run CAPV leg ([t/28083](https://ethereum-magicians.org/t/erc-8274-a
 | ConfidentialPolicyVerdict (Guard) | `0x824A7b5A7C3767a4f6D678738395e3951DcE1A73` |
 | PolicyDomainRegistry | `0xdf5Bf6C89Fc54F9ea75f2BaE6E33227400A965bd` |
 | TransparentDenialAnchor (DENY, transparent corner) | `0xbAd0Befd720178b5fD3b5fB87c346A8131367bE1` |
+| ProvableDenialAnchor (DENY, confidential ZK corner) | `0x053d3570da47A0F767AE8E5AB3CeFe63dfeea511` |
+| DenyHonkVerifier (UltraHonk, confidential DENY) | `0x32E58d01AF21483a66Ab59c598667C80224441a2` |
+| DenyHonkVerifierAdapter (`IVerifier`) | `0x5681F3584bfe4527e6C229Cf941E2cAA65040ecf` |
 
-The transparent denial anchor holds the composed-run action anchored as a DENY under babyblue's canonical tuple, so `isDenied(0x16079127…afad0, 0x17f36ca0…0315f)` returns `true` on-chain and any unevaluated action returns `false` — the non-suppression trace, publicly recomputable by anyone. This closes the DENY board through the transparent corner (a confidential ZK DENY corner awaits a denial circuit).
+Both corners of the DENY board are live. The **transparent** anchor holds the composed-run action anchored as a DENY under babyblue's canonical tuple, so `isDenied(0x16079127…afad0, 0x17f36ca0…0315f)` is `true` and any unevaluated action is `false` — the non-suppression trace, publicly recomputable by anyone. The **confidential** anchor holds a DENY anchored through a genuine `decision == 0` UltraHonk proof (the `capv_denylist` circuit) verified on-chain by `DenyHonkVerifier`, so `isDenied(0x…002a, 0x041271…5e03)` is `true` with no policy revealed. Evaluated-and-denied is now distinguishable from never-evaluated on both a public-recompute and a zero-knowledge basis.
 
 These use the ZK-optimized verifier (−71.5% verify gas). An earlier deployment with the default ZK verifier (adapter `0x99e980D105c98be0B2aDd2A5dC3A11182542904d`) verifies the same proof against the same VK, so it remains valid as a composed-run reference.
 
