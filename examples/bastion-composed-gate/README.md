@@ -46,20 +46,24 @@ Layer 2: Bastion Policy
 
 ```solidity
 constructor(
-    IConfidentialPolicyVerdict _capv,   // CAPV guard contract
-    IBastionPolicy _bastion,            // Bastion policy contract
-    bytes32 _domainId                   // policy domain identifier
+    IConfidentialPolicyVerdict _capv,        // CAPV guard contract
+    IBastionPolicy _bastion,                 // Bastion policy contract
+    IIdentityRegistry _identityRegistry,     // ERC 8004 identity registry
+    bytes32 _domainId                        // policy domain identifier
 )
 
 function executeDualGate(
     Verdict calldata v,    // CAPV verdict (with ZK proof)
     bytes calldata proof,  // UltraHonk proof from Noir circuit
-    address agent,         // agent address for Bastion lookup
     address target,        // call target
     bytes calldata data,   // calldata
     uint256 actionNonce    // replay protection
 ) external payable
 ```
+
+The agent address is never passed in. It is resolved from `v.agentId` through
+`identityRegistry.ownerOf`, so the ZK verdict and the Bastion policy check
+always evaluate the same agent.
 
 ## Reference
 

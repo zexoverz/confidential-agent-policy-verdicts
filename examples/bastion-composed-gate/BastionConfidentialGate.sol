@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+// SPDX-License-Identifier: CC0-1.0
+pragma solidity ^0.8.20;
 // @notice: UNDER ACTIVE DEVELOPMENT — Not production-ready.
 
 import {IConfidentialPolicyVerdict, Verdict} from "@capv/IConfidentialPolicyVerdict.sol";
 import {PolicyAction, PolicyActionLib} from "@capv/PolicyAction.sol";
 import {IBastionPolicy} from "./interfaces/IBastionPolicy.sol";
+import {IIdentityRegistry} from "./interfaces/IIdentityRegistry.sol";
 
 /// @title BastionConfidentialGate
 /// @notice Composable gate that combines confidential ZK policy verdicts (CAPV)
@@ -28,6 +29,7 @@ contract BastionConfidentialGate {
 
     IConfidentialPolicyVerdict public immutable capvGuard;
     IBastionPolicy public immutable bastionPolicy;
+    IIdentityRegistry public immutable identityRegistry;
     bytes32 public immutable domainId;
 
     error ConfidentialVerdictFailed();
@@ -48,24 +50,24 @@ contract BastionConfidentialGate {
     constructor(
         IConfidentialPolicyVerdict _capv,
         IBastionPolicy _bastion,
+        IIdentityRegistry _identityRegistry,
         bytes32 _domainId
     ) {
         capvGuard = _capv;
         bastionPolicy = _bastion;
+        identityRegistry = _identityRegistry;
         domainId = _domainId;
     }
 
     /// @notice Execute an action gated by both confidential and public policy.
     /// @param v          The CAPV verdict (ZK proof that secret policy allows this).
     /// @param proof      The ZK proof bytes (UltraHonk proof from Noir circuit).
-    /// @param agent      The agent address (for Bastion's public policy lookup).
     /// @param target     The call target address.
     /// @param data       The call data to execute.
     /// @param actionNonce Monotonic nonce for replay protection.
     function executeDualGate(
         Verdict calldata v,
         bytes calldata proof,
-        address agent,
         address target,
         bytes calldata data,
         uint256 actionNonce
@@ -92,6 +94,9 @@ contract BastionConfidentialGate {
         emit ConfidentialVerdictConsumed(v.nullifier, v.agentId, v.policyRoot);
 
         // ── Layer 2: Public Bastion policy ────────────────────────────
+        // Agent address is resolved from the verdict's agentId itself, so
+        // Layer 2 can never evaluate a different agent than Layer 1 verified.
+        address agent = identityRegistry.ownerOf(v.agentId);
         (bool allowed, bytes memory reason) = bastionPolicy.checkTransaction(
             agent, target, msg.value, data
         );
@@ -107,15 +112,16 @@ contract BastionConfidentialGate {
     }
 
     /// @notice Verify both policy layers without executing.
+    /// @param value       Wei the real call would forward, matching executeDualGate's msg.value.
     /// @return confidentialOk True if the ZK proof verifies.
     /// @return publicOk      True if Bastion's public policy passes.
     /// @return publicReason  Reason if Bastion's policy does not pass.
     function preflight(
         Verdict calldata v,
         bytes calldata proof,
-        address agent,
         address target,
         bytes calldata data,
+        uint256 value,
         uint256 actionNonce
     )
         external
@@ -127,7 +133,7 @@ contract BastionConfidentialGate {
             domainId: domainId,
             agentId: v.agentId,
             target: target,
-            value: 0,
+            value: value,
             callDataHash: keccak256(data),
             actionNonce: actionNonce
         }).commit();
@@ -135,8 +141,9 @@ contract BastionConfidentialGate {
         if (commitment != v.actionCommitment) return (false, false, "action commitment mismatch");
 
         confidentialOk = capvGuard.verify(v, proof);
+        address agent = identityRegistry.ownerOf(v.agentId);
         (publicOk, publicReason) = bastionPolicy.checkTransaction(
-            agent, target, 0, data
+            agent, target, value, data
         );
     }
 }
