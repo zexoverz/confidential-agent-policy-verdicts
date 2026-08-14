@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {ProvableDenialAnchor} from "../src/ProvableDenialAnchor.sol";
 import {IProvableDenial} from "../src/IProvableDenial.sol";
 import {ConfidentialPolicyVerdict} from "../src/ConfidentialPolicyVerdict.sol";
-import {Verdict} from "../src/IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 import {PolicyDomainRegistry} from "../src/PolicyDomainRegistry.sol";
 import {MockVerifier} from "../src/mocks/MockVerifier.sol";
 
@@ -19,7 +19,8 @@ contract ProvableDenialTest is Test {
         uint256 indexed agentId,
         bytes32 indexed domainId,
         bytes32 policyRoot,
-        bytes32 actionCommitment
+        bytes32 actionCommitment,
+        uint8 policyKind
     );
 
     PolicyDomainRegistry registry;
@@ -51,7 +52,8 @@ contract ProvableDenialTest is Test {
             executor: EXECUTOR,
             expiry: uint64(block.timestamp + 1 hours),
             nullifier: keccak256("nf-deny-1"),
-            decision: 0
+            decision: 0,
+            policyKind: PolicyKind.DENIED
         });
     }
 
@@ -59,7 +61,7 @@ contract ProvableDenialTest is Test {
     function test_AnchorDenial() public {
         Verdict memory v = _deny();
         vm.expectEmit(true, true, true, true);
-        emit DenialAnchored(v.nullifier, v.agentId, v.domainId, v.policyRoot, v.actionCommitment);
+        emit DenialAnchored(v.nullifier, v.agentId, v.domainId, v.policyRoot, v.actionCommitment, v.policyKind);
         denial.anchorDenial(v, "proof");
         assertTrue(denial.isDenied(DOMAIN, v.nullifier));
     }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: CC0-1.0
 pragma solidity ^0.8.20;
 
-import {Verdict} from "./IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "./IConfidentialPolicyVerdict.sol";
 
 /// @notice Provable-denial companion to the Confidential Policy Verdict standard.
 ///
@@ -16,7 +16,8 @@ interface IProvableDenial {
         uint256 indexed agentId,
         bytes32 indexed domainId,
         bytes32 policyRoot,
-        bytes32 actionCommitment
+        bytes32 actionCommitment,
+        uint8 policyKind
     );
 
     error NotADenial(uint8 decision);
@@ -24,6 +25,8 @@ interface IProvableDenial {
     error DenialDomainInactive(bytes32 domainId);
     error DenialPolicyRootRejected(bytes32 root);
     error DenialProofInvalid();
+    /// @dev The verdict carries a kind that is not a refusal, so it cannot be anchored as a denial.
+    error NotARefusalKind(uint8 policyKind);
 
     /// @notice Anchor a DENY verdict. MUST require `v.decision == 0`, verify the proof against the
     /// domain's program, and burn the nullifier against the denial record. Unlike consumption, it is
@@ -32,4 +35,11 @@ interface IProvableDenial {
     function anchorDenial(Verdict calldata v, bytes calldata proof) external;
 
     function isDenied(bytes32 domainId, bytes32 nullifier) external view returns (bool);
+
+    /// @notice The refusal kind anchored for this nullifier, or `PolicyKind.ALLOWED` (0) when nothing
+    /// is anchored. This is the §4 carriage requirement: a consumer gating an irreversible action can
+    /// tell "a rule refused this" (DENIED) from "nothing authorized it" (NOT_PERMITTED) instead of
+    /// reading one generic denial. A kind proven in-circuit but dropped here would let the taxonomy be
+    /// adopted in words while the mechanism is discarded at the boundary.
+    function denialKind(bytes32 domainId, bytes32 nullifier) external view returns (uint8);
 }

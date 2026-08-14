@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Script, console2} from "forge-std/Script.sol";
 import {TransparentDenialAnchor} from "../src/TransparentDenialAnchor.sol";
-import {Verdict} from "../src/IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 import {PolicyAction} from "../src/PolicyAction.sol";
 
 /// @notice Deploys the transparent denial anchor and anchors the composed-run action as a DENY, using
@@ -31,7 +31,8 @@ contract AnchorComposedDenial is Script {
             executor: EXECUTOR,
             expiry: 1_700_003_600,
             nullifier: NULLIFIER,
-            decision: 0
+            decision: 0,
+            policyKind: PolicyKind.DENIED
         });
         PolicyAction memory a = PolicyAction({
             chainId: 11155111,

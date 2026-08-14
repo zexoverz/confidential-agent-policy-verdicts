@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {ConfidentialPolicyVerdict} from "../src/ConfidentialPolicyVerdict.sol";
 import {PolicyDomainRegistry} from "../src/PolicyDomainRegistry.sol";
-import {Verdict} from "../src/IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 import {HonkVerifier} from "../src/verifier/HonkVerifier.sol";
 import {HonkVerifierAdapter, IHonkVerifier} from "../src/HonkVerifierAdapter.sol";
 
@@ -105,7 +105,8 @@ contract ComposedLiveRunTest is Test {
             executor: 0x1C213D41668e5bDe79AaEE2240c6f6Ad7b4c9093, // babyblue's real Sepolia key
             expiry: uint64(block.timestamp + 1 hours),
             nullifier: 0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f,
-            decision: 1
+            decision: 1,
+            policyKind: PolicyKind.ALLOWED
         });
         capvProof = vm.readFileBinary("./test/fixtures/composed_live.proof");
     }

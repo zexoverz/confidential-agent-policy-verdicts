@@ -40,7 +40,7 @@ bb write_solidity_verifier -k target/vk --optimized -o target/Verifier.sol
 generated with `--optimized` (the ZK-optimized template, `honk_zk_optimized`). On this circuit that is a
 71.5% verify-gas cut versus the default ZK verifier (2,564,863 to 731,348 gas) at smaller deployed
 bytecode (18,557 to 16,892 bytes), with the identical VK — the same proof verifies against both, so the
-full suite passes unchanged. Drop `--optimized` to fall back to the default ZK verifier. `src/HonkVerifierAdapter.sol` wraps it to implement the ERC's `IVerifier.verifyProof(programKey, publicInputs, proof)`: it decodes the `Verdict`, serializes the 38 public inputs, and calls the verifier. Register the adapter as a domain's verifier in `PolicyDomainRegistry` in place of `MockVerifier`.
+full suite passes unchanged. Drop `--optimized` to fall back to the default ZK verifier. `src/HonkVerifierAdapter.sol` wraps it to implement the ERC's `IVerifier.verifyProof(programKey, publicInputs, proof)`: it decodes the `Verdict`, serializes the 39 public inputs, and calls the verifier. Register the adapter as a domain's verifier in `PolicyDomainRegistry` in place of `MockVerifier`.
 
 ## Public input layout
 
@@ -53,7 +53,7 @@ The circuit's public inputs mirror the on-chain `Verdict`: `agent_id`, `domain_i
 - [x] toolchain verified: nargo 1.0.0-beta.25 + bb 5.1.0
 - [x] **real proof**: `Prover.example.toml` witness → `nargo execute` → `bb prove` → `bb verify` (verified)
 - [x] **keccak packing verified**: matches Solidity `PolicyAction.commit` byte-for-byte (`test/PackingCheck.t.sol`)
-- [x] **Solidity verifier generated**: `HonkVerifier` (keccak transcript, `-t evm`), `verify(proof, bytes32[38])`
-- [x] **wired behind `IVerifier`**: `HonkVerifierAdapter` maps Verdict → 38 public inputs; real proof verifies on-chain and through the Guard's `consume` (`test/ConsumeReal.t.sol`)
+- [x] **Solidity verifier generated**: `HonkVerifier` (keccak transcript, `-t evm`), `verify(proof, bytes32[39])`
+- [x] **wired behind `IVerifier`**: `HonkVerifierAdapter` maps Verdict → 39 public inputs; real proof verifies on-chain and through the Guard's `consume` (`test/ConsumeReal.t.sol`)
 - [x] **executor bound in-circuit**: `executor` is a committed public input; a proof checked against a different executor is rejected (`test/AdapterVerify.t.sol::test_proof_rejects_wrong_executor`)
 - [ ] Tokyo delta on top (Mandate: private accumulator, or CAPVand: multi-policy)

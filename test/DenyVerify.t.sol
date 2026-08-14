@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {DenyHonkVerifier} from "../src/verifier/DenyHonkVerifier.sol";
 import {HonkVerifierAdapter, IHonkVerifier} from "../src/HonkVerifierAdapter.sol";
 import {IVerifier} from "../src/IVerifier.sol";
-import {Verdict} from "../src/IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 
 /// @dev Verifies the real confidential-DENY proof (decision == 0) on-chain through the same
 /// Verdict -> 38-public-input adapter the ALLOW path uses. If this passes, the Sepolia anchor will too.
@@ -22,7 +22,8 @@ contract DenyVerifyTest is Test {
             executor: address(0xE0),
             expiry: 0,
             nullifier: 0x041271fcaf479f6ab927df3a03f74d3809e9f49d880cd7a9595c8dc0a58a5e03,
-            decision: 0
+            decision: 0,
+            policyKind: PolicyKind.DENIED
         });
         bytes memory proof = vm.readFileBinary("./test/fixtures/deny.proof");
 

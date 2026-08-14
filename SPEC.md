@@ -344,7 +344,7 @@ Implemented and tested (Foundry; the Test Cases above run as an executable suite
   preimage, hashed identically on-chain and in-circuit.
 - Cryptographic executor binding: direct submission, or an EIP-712 signed relay verified via
   `SignatureChecker` (ECDSA and ERC-1271).
-- ERC-165 support; `IConfidentialPolicyVerdict` interfaceId is `0x6c832e88`.
+- ERC-165 support; `IConfidentialPolicyVerdict` interfaceId is `0xd6da8150`.
 
 Still in progress:
 

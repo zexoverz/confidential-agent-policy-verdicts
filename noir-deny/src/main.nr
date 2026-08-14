@@ -24,6 +24,7 @@
 use keccak256::keccak256;
 
 global TREE_DEPTH: u32 = 8; // denylist up to 2^8 entries; raise as needed
+global KIND_DENIED: u8 = 1; // a rule fired against the target (denylist membership)
 
 fn main(
     // ---- public inputs: mirror the on-chain Verdict ----
@@ -33,6 +34,7 @@ fn main(
     action_commitment: pub [u8; 32], // = keccak(PolicyAction), full 256 bits
     nullifier: pub Field,
     decision: pub u8, // 0 = DENY
+    policy_kind: pub u8, // 1 = DENIED
     executor: pub Field, // address permitted to consume; committed so the proof binds to it
     // ---- private witness ----
     chain_id: Field,
@@ -45,6 +47,8 @@ fn main(
 ) {
     // 1. DENY only
     assert(decision == 0);
+    // The kind is committed, so a relying party cannot be handed a taxonomy the proof never established.
+    assert(policy_kind == KIND_DENIED);
 
     // 5. Executor binding: executor is a committed public input, bound to the proof.
     assert(executor != 0);
@@ -144,7 +148,7 @@ fn test_deny_verdict() {
     let executor: Field = 0xE0;
 
     main(
-        agent_id, domain_id, policy_root, commit, nullifier, 0, executor, chain_id, target, value,
+        agent_id, domain_id, policy_root, commit, nullifier, 0, KIND_DENIED, executor, chain_id, target, value,
         call_data_hash, action_nonce, index, path,
     );
 }

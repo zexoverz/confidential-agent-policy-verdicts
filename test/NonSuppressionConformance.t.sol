@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {TransparentDenialAnchor} from "../src/TransparentDenialAnchor.sol";
 import {IProvableDenial} from "../src/IProvableDenial.sol";
-import {Verdict} from "../src/IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 import {PolicyAction, PolicyActionLib} from "../src/PolicyAction.sol";
 
 /// @dev ERC-8274 non-suppression conformance vectors (§6). For each state the section names, a refusal
@@ -45,7 +45,8 @@ contract NonSuppressionConformanceTest is Test {
             executor: address(0x1C21),
             expiry: 0,
             nullifier: NULLIFIER,
-            decision: 0
+            decision: 0,
+            policyKind: PolicyKind.DENIED
         });
     }
 
@@ -79,18 +80,55 @@ contract NonSuppressionConformanceTest is Test {
     }
 
     /// §6.3 — NOT-PERMITTED MUST be distinguishable from DENIED at the consumed surface.
-    /// Pending: requires `policy_kind` on the Verdict struct and the anchor read (the §4 carriage
-    /// requirement). Once threaded, this asserts two decision=0 verdicts, a denylist hit and an
-    /// allowlist non-membership, read back as denied vs not_permitted rather than one generic denied.
+    /// Two decision=0 verdicts, a denylist hit and an allowlist non-membership, must read back as
+    /// different kinds rather than one generic denial. The refusal being tested is the loss of that
+    /// distinction: collapse `denialKind` to a constant and this fails.
     function test_conformance_notPermittedDistinctFromDenied() public {
-        vm.skip(true); // lights up when policy_kind reaches the Verdict struct + read surface
+        PolicyAction memory a = _action();
+
+        // (1) a rule fired against the action.
+        Verdict memory denied = _deny(a);
+        anchor.anchorDenial(denied, abi.encode(a));
+
+        // (2) a different action that nothing authorized.
+        PolicyAction memory b = _action();
+        b.actionNonce = 6;
+        Verdict memory notPermitted = _deny(b);
+        notPermitted.actionCommitment = b.commit();
+        notPermitted.nullifier = bytes32(uint256(0x17f4));
+        notPermitted.policyKind = PolicyKind.NOT_PERMITTED;
+        anchor.anchorDenial(notPermitted, abi.encode(b));
+
+        // both are denials...
+        assertTrue(anchor.isDenied(DOMAIN, NULLIFIER), "denylist hit is a denial");
+        assertTrue(anchor.isDenied(DOMAIN, bytes32(uint256(0x17f4))), "non-membership is a denial");
+        // ...but they are not the same claim.
+        assertEq(anchor.denialKind(DOMAIN, NULLIFIER), PolicyKind.DENIED, "a rule refused this");
+        assertEq(
+            anchor.denialKind(DOMAIN, bytes32(uint256(0x17f4))),
+            PolicyKind.NOT_PERMITTED,
+            "nothing authorized this"
+        );
+        assertTrue(
+            anchor.denialKind(DOMAIN, NULLIFIER) != anchor.denialKind(DOMAIN, bytes32(uint256(0x17f4))),
+            "the two refusals must not collapse into one generic denial"
+        );
     }
 
     /// §6.4 — a kind proven in-circuit but absent from the consumed verdict MUST be refused.
-    /// Pending: the carriage check. Once `policy_kind` is a Verdict field, this asserts a verdict that
-    /// dropped its kind before consumption is rejected, so the taxonomy cannot be adopted in words
-    /// while the mechanism is silently discarded at the boundary.
+    /// A verdict that dropped its kind on the way to the boundary carries the default ALLOWED kind,
+    /// which is not a refusal. Anchoring it must revert rather than record a kindless denial, so the
+    /// taxonomy cannot be adopted in words while the mechanism is discarded at the boundary.
     function test_conformance_kindMustSurviveToConsumedVerdict() public {
-        vm.skip(true); // lights up when policy_kind reaches the Verdict struct + read surface
+        PolicyAction memory a = _action();
+        Verdict memory v = _deny(a);
+        v.policyKind = PolicyKind.ALLOWED; // the kind was proven in-circuit but dropped here
+
+        vm.expectRevert(abi.encodeWithSelector(IProvableDenial.NotARefusalKind.selector, PolicyKind.ALLOWED));
+        anchor.anchorDenial(v, abi.encode(a));
+
+        // and nothing was recorded, so a dropped kind cannot leave a half-record behind.
+        assertFalse(anchor.isDenied(DOMAIN, NULLIFIER), "a kindless denial records nothing");
+        assertEq(anchor.denialKind(DOMAIN, NULLIFIER), PolicyKind.ALLOWED, "no kind is anchored");
     }
 }

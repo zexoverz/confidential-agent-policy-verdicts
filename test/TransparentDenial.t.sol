@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {TransparentDenialAnchor} from "../src/TransparentDenialAnchor.sol";
 import {IProvableDenial} from "../src/IProvableDenial.sol";
-import {Verdict} from "../src/IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 import {PolicyAction, PolicyActionLib} from "../src/PolicyAction.sol";
 
 /// @dev Transparent (recompute) denial anchor: the "proof" is the public PolicyAction preimage, so
@@ -44,7 +44,8 @@ contract TransparentDenialAnchorTest is Test {
             executor: address(0x1C21),
             expiry: 1_700_003_600,
             nullifier: NULLIFIER,
-            decision: 0
+            decision: 0,
+            policyKind: PolicyKind.DENIED
         });
     }
 
@@ -53,7 +54,9 @@ contract TransparentDenialAnchorTest is Test {
         Verdict memory v = _denyVerdict(a);
 
         vm.expectEmit(true, true, true, true);
-        emit IProvableDenial.DenialAnchored(v.nullifier, v.agentId, v.domainId, v.policyRoot, v.actionCommitment);
+        emit IProvableDenial.DenialAnchored(
+            v.nullifier, v.agentId, v.domainId, v.policyRoot, v.actionCommitment, v.policyKind
+        );
         anchor.anchorDenial(v, abi.encode(a));
 
         assertTrue(anchor.isDenied(DOMAIN, NULLIFIER), "denial must be anchored");

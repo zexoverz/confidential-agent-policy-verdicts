@@ -7,7 +7,7 @@ import {ConfidentialPolicyVerdict} from "../src/ConfidentialPolicyVerdict.sol";
 import {HonkVerifier} from "../src/verifier/HonkVerifier.sol";
 import {HonkVerifierAdapter, IHonkVerifier} from "../src/HonkVerifierAdapter.sol";
 import {IVerifier} from "../src/IVerifier.sol";
-import {Verdict} from "../src/IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 
 /// @notice Deploys the CAPV verifier stack and registers the ERC-8274 composed-run domain, giving the
 /// CAPV leg a real on-chain, recompute-verifiable verifier for the /ledger entry (t/28083 #150).
@@ -38,7 +38,8 @@ contract DeployComposedRun is Script {
             executor: 0x1C213D41668e5bDe79AaEE2240c6f6Ad7b4c9093,
             expiry: 1_700_003_600, // the proof's bound expiry (a public input)
             nullifier: 0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f,
-            decision: 1
+            decision: 1,
+            policyKind: PolicyKind.ALLOWED
         });
         bytes memory proof = vm.readFileBinary("./test/fixtures/composed_live.proof");
         bool ok = IVerifier(address(adapter)).verifyProof(bytes32(0), abi.encode(v), proof);

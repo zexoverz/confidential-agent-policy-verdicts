@@ -6,7 +6,7 @@ import {DenyHonkVerifier} from "../src/verifier/DenyHonkVerifier.sol";
 import {HonkVerifierAdapter, IHonkVerifier} from "../src/HonkVerifierAdapter.sol";
 import {PolicyDomainRegistry} from "../src/PolicyDomainRegistry.sol";
 import {IProvableDenial} from "../src/IProvableDenial.sol";
-import {Verdict} from "../src/IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 
 /// @notice Closes the confidential (ZK) corner of the DENY board on-chain. Deploys the denial verifier
 /// + adapter, registers a denial domain, and anchors a real confidential DENY through the ZK-gated
@@ -41,7 +41,8 @@ contract CloseConfidentialDenial is Script {
             executor: address(0xE0),
             expiry: 0,
             nullifier: NULLIFIER,
-            decision: 0
+            decision: 0,
+            policyKind: PolicyKind.DENIED
         });
         ANCHOR.anchorDenial(v, proof);
         vm.stopBroadcast();

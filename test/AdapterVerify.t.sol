@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Test} from "forge-std/Test.sol";
 import {HonkVerifier} from "../src/verifier/HonkVerifier.sol";
 import {HonkVerifierAdapter, IHonkVerifier} from "../src/HonkVerifierAdapter.sol";
-import {Verdict} from "../src/IConfidentialPolicyVerdict.sol";
+import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 
 /// @notice The full IVerifier path: a Verdict, serialized by the adapter into the circuit's public
 /// inputs, verifying the real UltraHonk proof. If this passes, the Guard's `consume` can use the
@@ -22,7 +22,8 @@ contract AdapterVerifyTest is Test {
             executor: address(0xE0),
             expiry: 0,
             nullifier: 0x041271fcaf479f6ab927df3a03f74d3809e9f49d880cd7a9595c8dc0a58a5e03,
-            decision: 1
+            decision: 1,
+            policyKind: PolicyKind.ALLOWED
         });
     }
 
