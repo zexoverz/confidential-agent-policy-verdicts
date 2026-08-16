@@ -1,0 +1,13 @@
+[package]
+authors = ["zexoverz"]
+description = "Credential nullifier circuit for ERC-XXXX companion module"
+name = "credential_nullifier"
+version = "0.1.0"
+license = "CC0-1.0"
+type = "bin"
+
+[dependencies]
+
+[dev-dependencies]
+
+[features]
