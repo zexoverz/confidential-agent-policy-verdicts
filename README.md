@@ -105,6 +105,9 @@ The composed-run CAPV leg ([t/28083](https://ethereum-magicians.org/t/erc-8274-a
 | TransparentDenialAnchor (DENY, transparent corner) | `0xdDC3f0C1DC52d0aB617b50bef142Bf3d69eD0eF9` |
 | ProvableDenialAnchor (DENY, confidential ZK corner) | `0xBAb4a69EEc7282dFFB18De2655F32797D800AdA5` |
 | DenyHonkVerifier (UltraHonk, confidential DENY) | `0x3A0F7f43Cee92cadbbC6073FF9B48C568E003264` |
+| HonkVerifierAdapter (confidential DENY leg) | `0x0f1b6f28C736cc58bfa486ED28C26182b41Cf76d` |
+
+All eight are source-verified on [Sourcify](https://sourcify.dev) with an `exact_match`, so the deployed bytecode can be checked against this repository without trusting the address list.
 | DenyHonkVerifierAdapter (`IVerifier`) | `0x5681F3584bfe4527e6C229Cf941E2cAA65040ecf` |
 
 Both corners of the DENY board are live. The **transparent** anchor holds the composed-run action anchored as a DENY under babyblue's canonical tuple, so `isDenied(0x16079127…afad0, 0x17f36ca0…0315f)` is `true` and any unevaluated action is `false` — the non-suppression trace, publicly recomputable by anyone. The **confidential** anchor holds a DENY anchored through a genuine `decision == 0` UltraHonk proof (the `capv_denylist` circuit) verified on-chain by `DenyHonkVerifier`, so `isDenied(0x…002a, 0x041271…5e03)` is `true` with no policy revealed. Evaluated-and-denied is now distinguishable from never-evaluated on both a public-recompute and a zero-knowledge basis.
