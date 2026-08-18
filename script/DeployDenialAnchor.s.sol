@@ -10,7 +10,7 @@ import {IPolicyDomainRegistry} from "../src/IPolicyDomainRegistry.sol";
 /// address and close the second three-way run through the same ERC-8274 boundary as the ALLOW side.
 contract DeployDenialAnchor is Script {
     IPolicyDomainRegistry constant REGISTRY =
-        IPolicyDomainRegistry(0xdf5Bf6C89Fc54F9ea75f2BaE6E33227400A965bd);
+        IPolicyDomainRegistry(0xBDD6aB65C86fb8f0C47069a0562652d448E98cea);
 
     function run() external {
         vm.startBroadcast();

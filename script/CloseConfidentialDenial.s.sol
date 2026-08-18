@@ -15,8 +15,8 @@ import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 /// nullifier is burned against the denial record.
 contract CloseConfidentialDenial is Script {
     PolicyDomainRegistry constant REGISTRY =
-        PolicyDomainRegistry(0xdf5Bf6C89Fc54F9ea75f2BaE6E33227400A965bd);
-    IProvableDenial constant ANCHOR = IProvableDenial(0x053d3570da47A0F767AE8E5AB3CeFe63dfeea511);
+        PolicyDomainRegistry(0xBDD6aB65C86fb8f0C47069a0562652d448E98cea);
+    IProvableDenial constant ANCHOR = IProvableDenial(0xBAb4a69EEc7282dFFB18De2655F32797D800AdA5);
 
     bytes32 constant DENIAL_DOMAIN = bytes32(uint256(42)); // matches the circuit's domain_id public input
     bytes32 constant POLICY_ROOT = 0x053d4542d140ad2350a0ee79fae4a522821274e428bd881e7e803ecd816635ac;

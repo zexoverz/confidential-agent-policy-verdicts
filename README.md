@@ -98,13 +98,13 @@ The composed-run CAPV leg ([t/28083](https://ethereum-magicians.org/t/erc-8274-a
 
 | Contract | Sepolia address |
 |---|---|
-| HonkVerifierAdapter (`IVerifier`) | `0x630074dcACdC624b191026F0d611A6ee7aE002C2` |
-| HonkVerifier (UltraHonk, ZK-optimized) | `0x5119e10e29030e7c392de6296Ed320c34a16b7fA` |
-| ConfidentialPolicyVerdict (Guard) | `0x824A7b5A7C3767a4f6D678738395e3951DcE1A73` |
-| PolicyDomainRegistry | `0xdf5Bf6C89Fc54F9ea75f2BaE6E33227400A965bd` |
-| TransparentDenialAnchor (DENY, transparent corner) | `0xbAd0Befd720178b5fD3b5fB87c346A8131367bE1` |
-| ProvableDenialAnchor (DENY, confidential ZK corner) | `0x053d3570da47A0F767AE8E5AB3CeFe63dfeea511` |
-| DenyHonkVerifier (UltraHonk, confidential DENY) | `0x32E58d01AF21483a66Ab59c598667C80224441a2` |
+| HonkVerifierAdapter (`IVerifier`) | `0x42c799cC90122705FC180B4801f4067B76843B1e` |
+| HonkVerifier (UltraHonk, ZK-optimized) | `0xF6eeF6F30D7efC96D136cf499655C8D3822B8f1b` |
+| ConfidentialPolicyVerdict (Guard) | `0xc0ed1D1429Ad0982186e6E9E8dECdbCD63054c70` |
+| PolicyDomainRegistry | `0xBDD6aB65C86fb8f0C47069a0562652d448E98cea` |
+| TransparentDenialAnchor (DENY, transparent corner) | `0xdDC3f0C1DC52d0aB617b50bef142Bf3d69eD0eF9` |
+| ProvableDenialAnchor (DENY, confidential ZK corner) | `0xBAb4a69EEc7282dFFB18De2655F32797D800AdA5` |
+| DenyHonkVerifier (UltraHonk, confidential DENY) | `0x3A0F7f43Cee92cadbbC6073FF9B48C568E003264` |
 | DenyHonkVerifierAdapter (`IVerifier`) | `0x5681F3584bfe4527e6C229Cf941E2cAA65040ecf` |
 
 Both corners of the DENY board are live. The **transparent** anchor holds the composed-run action anchored as a DENY under babyblue's canonical tuple, so `isDenied(0x16079127…afad0, 0x17f36ca0…0315f)` is `true` and any unevaluated action is `false` — the non-suppression trace, publicly recomputable by anyone. The **confidential** anchor holds a DENY anchored through a genuine `decision == 0` UltraHonk proof (the `capv_denylist` circuit) verified on-chain by `DenyHonkVerifier`, so `isDenied(0x…002a, 0x041271…5e03)` is `true` with no policy revealed. Evaluated-and-denied is now distinguishable from never-evaluated on both a public-recompute and a zero-knowledge basis.
@@ -115,7 +115,7 @@ Verify the composed-run proof against the deployed adapter. It returns `true` wi
 
 ```bash
 RPC=https://ethereum-sepolia-rpc.publicnode.com
-ADAPTER=0x630074dcACdC624b191026F0d611A6ee7aE002C2
+ADAPTER=0x42c799cC90122705FC180B4801f4067B76843B1e
 PROOF=0x$(xxd -p test/fixtures/composed_live.proof | tr -d '\n')
 PUB=$(cast abi-encode "f((uint256,bytes32,bytes32,bytes32,address,uint64,bytes32,uint8))" \
   "(54848,0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0,0x204a14dc3ab2fdead5450192caea7428c2751b53a95b57d22f93cccb61af19a8,0x5b5ec31c336cc8f95dc6d9025d1d008c6ed2cd5067b9c421b1d36927e230173a,0x1C213D41668e5bDe79AaEE2240c6f6Ad7b4c9093,1700003600,0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f,1)")
