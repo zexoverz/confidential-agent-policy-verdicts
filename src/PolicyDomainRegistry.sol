@@ -54,9 +54,18 @@ contract PolicyDomainRegistry is IPolicyDomainRegistry {
         uint64 maxRootAge
     ) external {
         if (_domains[domainId].registrar != address(0)) revert DomainExists();
-        _domains[domainId] = Domain(registrar, verifier, programKey, maxRootAge, true);
+        _domains[domainId] = Domain(registrar, address(0), verifier, programKey, maxRootAge, true);
         admin[domainId] = msg.sender;
         emit DomainRegistered(domainId, registrar, verifier, programKey);
+    }
+
+    /// @notice Declare (or clear) the ERC-8004 Identity Registry this domain's agent ids live in.
+    /// A domain on a chain that hosts no Identity Registry leaves this at address(0), and the
+    /// Guard's agent-existence check does not apply to it.
+    function setIdentityRegistry(bytes32 domainId, address identityRegistry) external onlyAdmin(domainId) {
+        address old = _domains[domainId].identityRegistry;
+        _domains[domainId].identityRegistry = identityRegistry;
+        emit DomainIdentityRegistryUpdated(domainId, old, identityRegistry);
     }
 
     function updateRoot(bytes32 domainId, bytes32 newRoot) external onlyAdmin(domainId) {
