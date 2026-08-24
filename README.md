@@ -110,13 +110,17 @@ The composed-run CAPV leg ([t/28083](https://ethereum-magicians.org/t/erc-8274-a
 | ProvableDenialAnchor (DENY, confidential ZK corner) | `0xBAb4a69EEc7282dFFB18De2655F32797D800AdA5` |
 | DenyHonkVerifier (UltraHonk, confidential DENY) | `0x3A0F7f43Cee92cadbbC6073FF9B48C568E003264` |
 | HonkVerifierAdapter (confidential DENY leg) | `0x0f1b6f28C736cc58bfa486ED28C26182b41Cf76d` |
-
-All eight are source-verified on [Sourcify](https://sourcify.dev) with an `exact_match`, so the deployed bytecode can be checked against this repository without trusting the address list.
 | DenyHonkVerifierAdapter (`IVerifier`) | `0x5681F3584bfe4527e6C229Cf941E2cAA65040ecf` |
+| NotAllowedHonkVerifier (UltraHonk, NOT_PERMITTED) | `0x5B67feeC8584057A77B32cd8EEE396F74d5bf143` |
+| HonkVerifierAdapter (not-permitted leg) | `0xcb037101D5932d5F8760CDdaA0fB8BE1a8662DB4` |
+
+All eleven are source-verified on [Sourcify](https://sourcify.dev) with an `exact_match`, so the deployed bytecode can be checked against this repository without trusting the address list.
 
 Both corners of the DENY board are live. The **transparent** anchor holds the composed-run action anchored as a DENY under babyblue's canonical tuple, so `isDenied(0x16079127…afad0, 0x17f36ca0…0315f)` is `true` and any unevaluated action is `false` — the non-suppression trace, publicly recomputable by anyone. The **confidential** anchor holds a DENY anchored through a genuine `decision == 0` UltraHonk proof (the `capv_denylist` circuit) verified on-chain by `DenyHonkVerifier`, so `isDenied(0x…002a, 0x041271…5e03)` is `true` with no policy revealed. Evaluated-and-denied is now distinguishable from never-evaluated on both a public-recompute and a zero-knowledge basis.
 
 These use the ZK-optimized verifier (−71.5% verify gas). An earlier deployment with the default ZK verifier (adapter `0x99e980D105c98be0B2aDd2A5dC3A11182542904d`) verifies the same proof against the same VK, so it remains valid as a composed-run reference.
+
+The third refusal kind is live too. `NOT_PERMITTED` is allowlist non-membership, a different claim from `DENIED`: a rule fired, versus nothing authorized the target. Domain `0x…002b` is registered against `NotAllowedHonkVerifier`, and the already-deployed `ProvableDenialAnchor` reads its verifier from the registry, so no second anchor was needed. The published witness commits to `chain_id = 11155111`, so it checks against the chain it is anchored on rather than needing a footnote. Note that `Domain.registrar` on `0x…002b` is Forge's default sender rather than the deploying EOA that `0x…002a` carries; the field is stored and emitted but is not used for access control, and `admin` — which is what gates `updateRoot` — is the deployer on both.
 
 Verify the composed-run proof against the deployed adapter. It returns `true` with no local state and no trust in the author:
 
