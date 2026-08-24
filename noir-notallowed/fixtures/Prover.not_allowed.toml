@@ -1,8 +1,8 @@
 agent_id = "0x07"
-domain_id = "0x2a"
+domain_id = "0x2b"
 policy_root = "0x24e703f14986ec5abcb79d7292a4593b3370440fd4d1f2b6e51653e2e045707f"
-action_commitment = [100, 139, 186, 127, 47, 14, 31, 195, 119, 27, 47, 77, 169, 58, 189, 138, 31, 255, 149, 122, 68, 226, 151, 152, 4, 240, 159, 182, 129, 7, 30, 23]
-nullifier = "0x1efbeda52f387ca0664fa2c3e5b89d61493504338c227a5cc47891db50cc098f"
+action_commitment = [209, 34, 90, 102, 253, 198, 44, 105, 132, 219, 209, 151, 193, 84, 203, 103, 116, 52, 146, 46, 80, 38, 0, 34, 77, 45, 216, 139, 201, 229, 3, 55]
+nullifier = "0x175e213a5805c9a6667a18873fae31437519db7099bd62f06d9b647af990fed7"
 decision = "0"
 policy_kind = "2"
 executor = "0xe0"

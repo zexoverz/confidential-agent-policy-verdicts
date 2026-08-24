@@ -20,10 +20,10 @@ import {PolicyAction, PolicyActionLib} from "../src/PolicyAction.sol";
 contract NotPermittedAnchorTest is Test {
     using PolicyActionLib for PolicyAction;
 
-    bytes32 constant DOMAIN = bytes32(uint256(42));
+    bytes32 constant DOMAIN = bytes32(uint256(43));
     bytes32 constant POLICY_ROOT = 0x24e703f14986ec5abcb79d7292a4593b3370440fd4d1f2b6e51653e2e045707f;
-    bytes32 constant COMMITMENT = 0x648bba7f2f0e1fc3771b2f4da93abd8a1fff957a44e2979804f09fb681071e17;
-    bytes32 constant NULLIFIER = 0x1efbeda52f387ca0664fa2c3e5b89d61493504338c227a5cc47891db50cc098f;
+    bytes32 constant COMMITMENT = 0xd1225a66fdc62c6984dbd197c154cb677434922e502600224d2dd88bc9e50337;
+    bytes32 constant NULLIFIER = 0x175e213a5805c9a6667a18873fae31437519db7099bd62f06d9b647af990fed7;
     bytes32 constant PROGRAM = keccak256("capv_not_allowed");
     address constant EXECUTOR = address(0xE0);
     // The target the proof shows is absent from the committed allowlist.

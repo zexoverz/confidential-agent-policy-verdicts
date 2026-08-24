@@ -257,10 +257,15 @@ pub(crate) fn fixture_allowlist() -> [Field; 4] {
 
 // The action the checked-in fixture denies: a call to an address nobody allowlisted. It falls in the
 // gap between 0x4444... and 0x8888..., so the low leaf is the second entry.
+//
+// `domain_id` is 43 (0x2b) rather than 42 because 0x2a is already taken on the live Sepolia registry
+// 0xBDD6aB65C86fb8f0C47069a0562652d448E98cea by the confidential DENY leg, and `registerDomain`
+// reverts with `DomainExists()`. It is a public input and feeds both the commitment preimage and the
+// nullifier, so changing it means regenerating the proof, not editing a constant.
 pub(crate) fn fixture_action() -> Action {
     Action {
         chain_id: 1,
-        domain_id: 42,
+        domain_id: 43,
         agent_id: 7,
         target: 0x5555555555555555555555555555555555555555,
         value: 0,
