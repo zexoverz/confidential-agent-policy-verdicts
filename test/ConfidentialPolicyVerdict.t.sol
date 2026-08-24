@@ -6,6 +6,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ConfidentialPolicyVerdict} from "../src/ConfidentialPolicyVerdict.sol";
 import {PolicyDomainRegistry} from "../src/PolicyDomainRegistry.sol";
 import {IConfidentialPolicyVerdict, Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
+import {PolicyAction, PolicyActionLib} from "../src/PolicyAction.sol";
 import {MockVerifier} from "../src/mocks/MockVerifier.sol";
 import {GuardedExecutor} from "../src/GuardedExecutor.sol";
 import {PolicyAttestation, VerdictAttestation} from "../src/IPolicyAttestation.sol";
@@ -266,6 +267,30 @@ contract CAPVTest is Test {
         gx.execute(v, "proof", "", address(sink), 0, cd);
     }
 
+    // 7. Cross-chain / cross-domain replay. `chainId` and `domainId` are the two leading fields of
+    // the commitment preimage, so the identical action commits to a different value on another
+    // chain or under another policy domain, and a verdict minted for one never matches the
+    // commitment a guarded contract recomputes on the other.
+    function test_CrossChainAndCrossDomainCommitmentsDiffer() public pure {
+        PolicyAction memory a = PolicyAction({
+            chainId: 1,
+            domainId: DOMAIN,
+            agentId: 1,
+            target: address(0x51E),
+            value: 0,
+            callDataHash: keccak256(abi.encodeWithSignature("ping()")),
+            actionNonce: 0
+        });
+        bytes32 onChainOne = PolicyActionLib.commit(a);
+
+        a.chainId = 2; // same action, different chain
+        assertTrue(PolicyActionLib.commit(a) != onChainOne, "chainId must separate the commitment");
+
+        a.chainId = 1;
+        a.domainId = keccak256("other-compliance"); // same action, different policy domain
+        assertTrue(PolicyActionLib.commit(a) != onChainOne, "domainId must separate the commitment");
+    }
+
     // --- ERC-165 ---
 
     // 17. supportsInterface true for the standard + IERC165, false otherwise
@@ -301,5 +326,30 @@ contract CAPVTest is Test {
         assertEq(got.policyRoot, v.policyRoot);
         assertEq(uint256(got.decision), 1);
         assertEq(got.agentId, v.agentId);
+    }
+
+    // 19. Malformed proof reaching consume reverts with InvalidProof, matching what the
+    // ordered check names, rather than propagating the verifier's own error.
+    function test_ConsumeMalformedProofRevertsInvalidProof() public {
+        verifier.setRevert(true);
+        Verdict memory v = _verdict();
+        vm.prank(EXECUTOR);
+        vm.expectRevert(IConfidentialPolicyVerdict.InvalidProof.selector);
+        guard.consume(v, "garbage");
+    }
+
+    // 20. Well-formedness is checked before anything that could mask it. An inactive domain
+    // would otherwise hide a decision/policyKind disagreement behind DomainInactive.
+    function test_KindMismatchBeatsInactiveDomain() public {
+        registry.revokeDomain(DOMAIN);
+        Verdict memory v = _verdict();
+        v.policyKind = PolicyKind.NOT_PERMITTED;
+        vm.prank(EXECUTOR);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IConfidentialPolicyVerdict.VerdictKindMismatch.selector, uint8(1), PolicyKind.NOT_PERMITTED
+            )
+        );
+        guard.consume(v, "proof");
     }
 }
