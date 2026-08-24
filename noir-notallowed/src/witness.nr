@@ -262,9 +262,14 @@ pub(crate) fn fixture_allowlist() -> [Field; 4] {
 // 0xBDD6aB65C86fb8f0C47069a0562652d448E98cea by the confidential DENY leg, and `registerDomain`
 // reverts with `DomainExists()`. It is a public input and feeds both the commitment preimage and the
 // nullifier, so changing it means regenerating the proof, not editing a constant.
+//
+// `chain_id` is 11155111 (Sepolia), the chain this leg is anchored on. Nothing on-chain reads it —
+// it is a private input folded into the commitment preimage — but the witness is published as
+// recompute-verifiable, so it commits to the real chain rather than to mainnet. Like `domain_id`,
+// changing it moves both the commitment and the nullifier.
 pub(crate) fn fixture_action() -> Action {
     Action {
-        chain_id: 1,
+        chain_id: 11155111,
         domain_id: 43,
         agent_id: 7,
         target: 0x5555555555555555555555555555555555555555,

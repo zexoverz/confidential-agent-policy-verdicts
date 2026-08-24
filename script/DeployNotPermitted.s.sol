@@ -29,10 +29,14 @@ contract DeployNotPermitted is Script {
     // 0x2b, not 0x2a: the confidential DENY leg already holds 0x2a on this registry and
     // `registerDomain` reverts with `DomainExists()`. Because domain_id is a public input that also
     // feeds the commitment preimage and the nullifier, the proof below was regenerated under 0x2b.
+    //
+    // The witness also commits to chain_id 11155111 (Sepolia), the chain this leg is anchored on.
+    // Nothing on-chain reads it — it is a private input — but the witness is published as
+    // recompute-verifiable, so it names the chain the deployment actually lives on.
     bytes32 constant DOMAIN_ID = bytes32(uint256(0x2b));
     bytes32 constant POLICY_ROOT = 0x24e703f14986ec5abcb79d7292a4593b3370440fd4d1f2b6e51653e2e045707f;
-    bytes32 constant COMMITMENT = 0xd1225a66fdc62c6984dbd197c154cb677434922e502600224d2dd88bc9e50337;
-    bytes32 constant NULLIFIER = 0x175e213a5805c9a6667a18873fae31437519db7099bd62f06d9b647af990fed7;
+    bytes32 constant COMMITMENT = 0xd1f89cac88ca71fea90df48ba29278d5782dc8eb76127bf7bfdafca71aaa8048;
+    bytes32 constant NULLIFIER = 0x1d38c31e6bb446623f552d36f1ce11aa86c06cefe2b5a26e53f4700792f32c84;
     address constant EXECUTOR = address(0xe0);
     uint256 constant AGENT_ID = 7;
 

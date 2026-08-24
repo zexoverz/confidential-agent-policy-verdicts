@@ -13,8 +13,8 @@ import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 /// of four addresses, and a target (0x5555...) that sits in the gap between the second and third.
 contract NotAllowedVerifyTest is Test {
     bytes32 constant POLICY_ROOT = 0x24e703f14986ec5abcb79d7292a4593b3370440fd4d1f2b6e51653e2e045707f;
-    bytes32 constant COMMITMENT = 0xd1225a66fdc62c6984dbd197c154cb677434922e502600224d2dd88bc9e50337;
-    bytes32 constant NULLIFIER = 0x175e213a5805c9a6667a18873fae31437519db7099bd62f06d9b647af990fed7;
+    bytes32 constant COMMITMENT = 0xd1f89cac88ca71fea90df48ba29278d5782dc8eb76127bf7bfdafca71aaa8048;
+    bytes32 constant NULLIFIER = 0x1d38c31e6bb446623f552d36f1ce11aa86c06cefe2b5a26e53f4700792f32c84;
 
     NotAllowedHonkVerifier internal honk;
     HonkVerifierAdapter internal adapter;

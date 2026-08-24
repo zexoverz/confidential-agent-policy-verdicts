@@ -22,8 +22,8 @@ contract NotPermittedAnchorTest is Test {
 
     bytes32 constant DOMAIN = bytes32(uint256(43));
     bytes32 constant POLICY_ROOT = 0x24e703f14986ec5abcb79d7292a4593b3370440fd4d1f2b6e51653e2e045707f;
-    bytes32 constant COMMITMENT = 0xd1225a66fdc62c6984dbd197c154cb677434922e502600224d2dd88bc9e50337;
-    bytes32 constant NULLIFIER = 0x175e213a5805c9a6667a18873fae31437519db7099bd62f06d9b647af990fed7;
+    bytes32 constant COMMITMENT = 0xd1f89cac88ca71fea90df48ba29278d5782dc8eb76127bf7bfdafca71aaa8048;
+    bytes32 constant NULLIFIER = 0x1d38c31e6bb446623f552d36f1ce11aa86c06cefe2b5a26e53f4700792f32c84;
     bytes32 constant PROGRAM = keccak256("capv_not_allowed");
     address constant EXECUTOR = address(0xE0);
     // The target the proof shows is absent from the committed allowlist.
@@ -63,7 +63,7 @@ contract NotPermittedAnchorTest is Test {
     /// carries — the same preimage packing on both sides of the boundary.
     function _action() internal pure returns (PolicyAction memory a) {
         a = PolicyAction({
-            chainId: 1,
+            chainId: 11155111,
             domainId: DOMAIN,
             agentId: 7,
             target: TARGET,
