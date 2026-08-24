@@ -143,6 +143,43 @@ contract CAPVTest is Test {
         guard.consume(v2, "proof");
     }
 
+    // 8b. Grace is generation-agnostic. Two rotations inside maxRootAge must not drop the
+    // oldest root: the spec says a root is acceptable if it is current or superseded less
+    // than maxRootAge ago, and says nothing about how many rotations have happened since.
+    // Each retained root is measured against its OWN supersession time, not the current
+    // root's, so ROOT and root-v2 fall out of the window at different moments.
+    function test_TwoRapidRotationsKeepEveryRootInsideItsOwnWindow() public {
+        uint256 t0 = block.timestamp; // ROOT became current here, maxRootAge is 1 hour
+
+        vm.warp(t0 + 10 minutes);
+        registry.updateRoot(DOMAIN, keccak256("root-v2")); // ROOT superseded at t0 + 10m
+        vm.warp(t0 + 20 minutes);
+        registry.updateRoot(DOMAIN, keccak256("root-v3")); // root-v2 superseded at t0 + 20m
+
+        // ROOT was superseded 10 minutes ago. It is two generations back, but still inside
+        // its own grace window, so it is still acceptable.
+        assertTrue(registry.isRootAcceptable(DOMAIN, ROOT), "ROOT is inside its own maxRootAge");
+        assertTrue(registry.isRootAcceptable(DOMAIN, keccak256("root-v2")), "root-v2 is inside its own window");
+
+        // And it is acceptable end to end, through the guard.
+        Verdict memory v = _verdict(); // built after the warp, so expiry is fresh; still points at ROOT
+        vm.prank(EXECUTOR);
+        guard.consume(v, "proof");
+        assertTrue(guard.isConsumed(DOMAIN, v.nullifier));
+
+        // One second past ROOT's own window, ROOT is rejected while root-v2 — superseded
+        // 10 minutes later — is still inside its own.
+        vm.warp(t0 + 10 minutes + 1 hours);
+        assertFalse(registry.isRootAcceptable(DOMAIN, ROOT), "ROOT is past its own maxRootAge");
+        assertTrue(registry.isRootAcceptable(DOMAIN, keccak256("root-v2")), "root-v2 has 10 more minutes");
+
+        Verdict memory v2 = _verdict();
+        v2.nullifier = keccak256("nf-2");
+        vm.prank(EXECUTOR);
+        vm.expectRevert(abi.encodeWithSelector(IConfidentialPolicyVerdict.PolicyRootRejected.selector, ROOT));
+        guard.consume(v2, "proof");
+    }
+
     // 9. Revocation is immediate, no grace
     function test_RevocationImmediate() public {
         registry.revokeDomain(DOMAIN);
