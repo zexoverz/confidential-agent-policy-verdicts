@@ -113,9 +113,13 @@ contract ConfidentialPolicyVerdict is IConfidentialPolicyVerdict, EIP712, ERC165
     }
 
     /// @dev Existence is an ERC-721 ownership read: the agent exists when `ownerOf` returns a
-    /// non-zero owner without reverting. A registry that reverts, or is not a registry at all,
-    /// fails closed rather than propagating its own error.
+    /// non-zero owner without reverting. A registry that reverts fails closed rather than
+    /// propagating its own error. A declared address holding no code names no agents at all, and
+    /// is checked explicitly because Solidity's own code-existence check reverts outside the
+    /// `try`, which would surface a misconfigured domain as an opaque revert instead of
+    /// `AgentUnknown`.
     function _agentExists(address identityRegistry, uint256 agentId) internal view returns (bool) {
+        if (identityRegistry.code.length == 0) return false;
         try IIdentityRegistry(identityRegistry).ownerOf(agentId) returns (address owner) {
             return owner != address(0);
         } catch {

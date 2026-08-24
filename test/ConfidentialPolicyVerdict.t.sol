@@ -181,6 +181,30 @@ contract CAPVTest is Test {
         guard.consume(v2, "proof");
     }
 
+    // 8c. Retained history is bounded at eight superseded generations, so the grace rule is
+    // approximated from below: a domain that rotates more often than that inside one window
+    // loses its oldest roots early. They are rejected sooner than maxRootAge, never later,
+    // so the overflow fails closed.
+    function test_RotationsBeyondRetainedHistoryFailClosed() public {
+        for (uint256 i = 2; i <= 10; ++i) {
+            vm.warp(block.timestamp + 1 minutes);
+            registry.updateRoot(DOMAIN, keccak256(abi.encodePacked("root-v", i))); // 9 supersessions
+        }
+
+        // ROOT stopped being current nine minutes ago, well inside its one-hour window, but it
+        // is nine generations back and only eight are retained.
+        assertFalse(registry.isRootAcceptable(DOMAIN, ROOT), "the oldest generation ages out early");
+        assertTrue(
+            registry.isRootAcceptable(DOMAIN, keccak256(abi.encodePacked("root-v", uint256(2)))),
+            "the eight retained generations are unaffected"
+        );
+
+        Verdict memory v = _verdict();
+        vm.prank(EXECUTOR);
+        vm.expectRevert(abi.encodeWithSelector(IConfidentialPolicyVerdict.PolicyRootRejected.selector, ROOT));
+        guard.consume(v, "proof");
+    }
+
     // 9. Revocation is immediate, no grace
     function test_RevocationImmediate() public {
         registry.revokeDomain(DOMAIN);
@@ -425,7 +449,17 @@ contract CAPVTest is Test {
         assertTrue(guard.isConsumed(DOMAIN, v.nullifier));
     }
 
-    // 23. Check 2 sits ahead of everything that could mask it: an inactive domain must not hide
+    // 23. A declared address holding no code names no agents: the domain is misconfigured, and
+    // the Guard says so with AgentUnknown rather than reverting without data.
+    function test_IdentityRegistryWithoutCodeRefusesEveryAgent() public {
+        registry.setIdentityRegistry(DOMAIN, address(0xDEAD)); // no code at this address
+        Verdict memory v = _verdict();
+        vm.prank(EXECUTOR);
+        vm.expectRevert(abi.encodeWithSelector(IConfidentialPolicyVerdict.AgentUnknown.selector, uint256(1)));
+        guard.consume(v, "proof");
+    }
+
+    // 24. Check 2 sits ahead of everything that could mask it: an inactive domain must not hide
     // an unknown agent behind DomainInactive.
     function test_UnknownAgentBeatsInactiveDomain() public {
         MockIdentityRegistry identity = new MockIdentityRegistry();
