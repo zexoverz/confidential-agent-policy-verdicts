@@ -1,4 +1,4 @@
-//! CAPV deny-if-not-allowed circuit (v2, PRE-DRAFT) — the richer confidential denial.
+//! CAPV deny-if-not-allowed circuit (v2) — the richer confidential denial.
 //!
 //! Two DENYs are not the same claim:
 //!   - denylist membership (the `capv_denylist` circuit): a rule prohibits the target -> "denied".
@@ -12,17 +12,18 @@
 //!   L.value < target  AND  ( L is the maximum (next_value == 0)  OR  target < L.next_value )
 //! and prove L is a member of the tree. No leaf holds `target`, so `target` is not a member.
 //!
-//! DESIGN NOTES (pre-draft, being settled with Merlini on the 8274 thread):
-//!  1. Where `policy_kind` lives. This draft carries it as a committed public input (the position
-//!     argued on-thread), not policy_root semantics (a trusted label) or domain separation alone.
-//!     If that changes, only the policy_kind wiring changes; the tree + non-membership is independent.
+//! DESIGN NOTES:
+//!  1. Where `policy_kind` lives. Settled with Merlini on the 8274 thread: a committed public input,
+//!     not policy_root semantics (a trusted label) and not domain separation alone. A relying party
+//!     therefore cannot be handed a refusal kind the proof never established.
 //!  2. Ordering soundness. `<` on Field is only sound when both operands are range-bounded. `target`
-//!     and leaf values are addresses (< 2^160); a finalized circuit MUST range-check them (a bit-size
-//!     assertion) before comparing. Left as a TODO below so the structure reads cleanly first.
+//!     and leaf values are addresses (< 2^160), and `addr_lt` decomposes both with `to_le_bits()`
+//!     over 160 bits, which range-checks them as it compares. Settled, not a TODO.
 //!  3. Tree well-formedness. Non-membership is sound only if the committed root is a correctly linked
 //!     indexed tree (each leaf's next pointer really is its in-tree successor). That invariant is
-//!     maintained by the off-chain tree builder / an insertion circuit, not proved here; it is the
-//!     standard indexed-Merkle-tree assumption and belongs in Security Considerations.
+//!     maintained by the off-chain tree builder in `witness.nr` (or by an insertion circuit), not
+//!     proved here; it is the standard indexed-Merkle-tree assumption and belongs in Security
+//!     Considerations. Still open.
 //!
 //! The public-input layout below is byte-identical to the ALLOW/denylist circuits except for the
 //! added `policy_kind`, so a not-permitted DENY binds to the same on-chain Verdict once policy_kind
@@ -30,8 +31,10 @@
 
 use keccak256::keccak256;
 
-global TREE_DEPTH: u32 = 8;
-global KIND_NOT_PERMITTED: u8 = 2; // decision == 0 because target is absent from the allowlist
+mod witness; // off-chain indexed-tree witness builder; not part of the proving program
+
+pub(crate) global TREE_DEPTH: u32 = 8;
+pub(crate) global KIND_NOT_PERMITTED: u8 = 2; // decision == 0 because target is absent from the allowlist
 
 fn main(
     // ---- public inputs: Verdict shape + policy_kind ----
@@ -92,7 +95,7 @@ global ADDR_BITS: u32 = 160; // targets and leaf values are Ethereum addresses
 
 // Unsigned less-than for values that fit in ADDR_BITS bits. `to_le_bits` range-checks that both
 // operands are < 2^ADDR_BITS, so the comparison is sound (a bare Field `<` is not). Returns a bool.
-fn addr_lt(a: Field, b: Field) -> bool {
+pub(crate) fn addr_lt(a: Field, b: Field) -> bool {
     let ab: [bool; ADDR_BITS] = a.to_le_bits();
     let bb: [bool; ADDR_BITS] = b.to_le_bits();
     let mut lt = false;
@@ -109,7 +112,7 @@ fn addr_lt(a: Field, b: Field) -> bool {
 }
 
 // Recompute a Merkle root from a leaf, its index, and its sibling path (pedersen nodes).
-fn compute_merkle_root(leaf: Field, index: Field, path: [Field; TREE_DEPTH]) -> Field {
+pub(crate) fn compute_merkle_root(leaf: Field, index: Field, path: [Field; TREE_DEPTH]) -> Field {
     let bits: [bool; TREE_DEPTH] = index.to_le_bits();
     let mut current = leaf;
     for i in 0..TREE_DEPTH {
@@ -122,7 +125,7 @@ fn compute_merkle_root(leaf: Field, index: Field, path: [Field; TREE_DEPTH]) -> 
 }
 
 // Pack the PolicyAction fields into the 224-byte ABI-encoded preimage (7 x 32-byte words).
-fn abi_encode_policy_action(
+pub(crate) fn abi_encode_policy_action(
     chain_id: Field,
     domain_id: Field,
     agent_id: Field,
@@ -150,7 +153,7 @@ fn abi_encode_policy_action(
 }
 
 // Split a 32-byte value into two 16-byte Field limbs (hi, lo).
-fn bytes32_to_two_fields(b: [u8; 32]) -> (Field, Field) {
+pub(crate) fn bytes32_to_two_fields(b: [u8; 32]) -> (Field, Field) {
     let mut hi: Field = 0;
     let mut lo: Field = 0;
     for i in 0..16 {
