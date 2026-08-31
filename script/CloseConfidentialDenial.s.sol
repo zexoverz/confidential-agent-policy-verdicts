@@ -23,7 +23,7 @@ contract CloseConfidentialDenial is Script {
     bytes32 constant COMMIT = 0x7ccb7a4e9d51128b951cbeddefaec1140180a3d13f6eae6f06596dc432057cfa;
     bytes32 constant NULLIFIER = 0x041271fcaf479f6ab927df3a03f74d3809e9f49d880cd7a9595c8dc0a58a5e03;
     // DenyHonkVerifier's own VK_HASH (src/verifier/DenyHonkVerifier.sol:20).
-    bytes32 constant PROGRAM_KEY = 0x1ba025cf346d90403c92e71e94edba6a5ecbc58409bd73a35706e8dfe0d36f7b;
+    bytes32 constant PROGRAM_KEY = 0x0b60fc55fc2bcb71089336a87895321b4da50b971179fdec06cd6c1bc6ef0ff4;
 
     function run() external {
         bytes memory proof = vm.readFileBinary("./test/fixtures/deny.proof");

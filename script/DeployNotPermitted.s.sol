@@ -40,7 +40,7 @@ contract DeployNotPermitted is Script {
     address constant EXECUTOR = address(0xe0);
     uint256 constant AGENT_ID = 7;
     // NotAllowedHonkVerifier's own VK_HASH (src/verifier/NotAllowedHonkVerifier.sol:20).
-    bytes32 constant PROGRAM_KEY = 0x2747114ccc2ace618efcd53e2322dc9b1e0978b808bd80713454591b9584cc6c;
+    bytes32 constant PROGRAM_KEY = 0x298a64f0bc045f79db372712eeefa00964f4867c029f8262ee724e2dca86eef6;
 
     function run() external {
         vm.startBroadcast();

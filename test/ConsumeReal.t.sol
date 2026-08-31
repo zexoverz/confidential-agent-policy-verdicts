@@ -13,7 +13,10 @@ import {HonkVerifierAdapter, IHonkVerifier} from "../src/HonkVerifierAdapter.sol
 /// the reference implementation is verified end to end with no mock in the path.
 contract ConsumeRealTest is Test {
     // HonkVerifier's own VK_HASH (src/verifier/HonkVerifier.sol:20).
-    bytes32 constant PROGRAM_KEY = 0x15dfad359ae3d919488f92128f12290d908220925f263eeec28e8a97f21a372a;
+    bytes32 constant PROGRAM_KEY = 0x10d07da428220548a6d7c4f405b1c8ded613a92e0b797262985a9ccdb1e6288e;
+
+    /// The expiry the checked-in fixture proofs were generated with.
+    uint64 constant FIXTURE_EXPIRY = 1900000000;
 
     function test_consume_with_real_proof() public {
         vm.warp(1_700_000_000);
@@ -35,7 +38,9 @@ contract ConsumeRealTest is Test {
             policyRoot: policyRoot,
             actionCommitment: 0x7ccb7a4e9d51128b951cbeddefaec1140180a3d13f6eae6f06596dc432057cfa,
             executor: executor,
-            expiry: uint64(block.timestamp + 1 hours),
+            // The proof commits to `expiry` as public input [39], so a Verdict presented to a real
+        // proof MUST carry the value the fixture was proven with. It used to be free here.
+        expiry: FIXTURE_EXPIRY,
             nullifier: 0x041271fcaf479f6ab927df3a03f74d3809e9f49d880cd7a9595c8dc0a58a5e03,
             decision: 1,
             policyKind: PolicyKind.ALLOWED

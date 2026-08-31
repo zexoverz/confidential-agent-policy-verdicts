@@ -1,0 +1,17 @@
+# Reconstructed from COMPOSED_RUN.md, which records every value of the live run.
+agent_id = "54848"
+domain_id = "0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0"
+policy_root = "0x204a14dc3ab2fdead5450192caea7428c2751b53a95b57d22f93cccb61af19a8"
+action_commitment = [91, 94, 195, 28, 51, 108, 200, 249, 93, 198, 217, 2, 93, 29, 0, 140, 110, 210, 205, 80, 103, 185, 196, 33, 177, 211, 105, 39, 226, 48, 23, 58]
+nullifier = "0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f"
+decision = "1"
+policy_kind = "0"
+executor = "0x1C213D41668e5bDe79AaEE2240c6f6Ad7b4c9093"
+expiry = "1900000000"
+chain_id = "11155111"
+target = "0xcA11bde05977b3631167028862bE2a173976CA11"
+value = "0"
+call_data_hash = [207, 172, 191, 226, 17, 207, 59, 230, 122, 29, 100, 166, 73, 154, 42, 240, 174, 71, 94, 44, 9, 101, 194, 164, 47, 150, 157, 36, 61, 242, 182, 205]
+action_nonce = "5"
+index = "0"
+path = ["0", "0", "0", "0", "0", "0", "0", "0"]

@@ -18,7 +18,7 @@ contract DeployComposedRun is Script {
     bytes32 constant DOMAIN_ID = 0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0;
     bytes32 constant POLICY_ROOT = 0x204a14dc3ab2fdead5450192caea7428c2751b53a95b57d22f93cccb61af19a8;
     // HonkVerifier's own VK_HASH (src/verifier/HonkVerifier.sol:20).
-    bytes32 constant PROGRAM_KEY = 0x15dfad359ae3d919488f92128f12290d908220925f263eeec28e8a97f21a372a;
+    bytes32 constant PROGRAM_KEY = 0x10d07da428220548a6d7c4f405b1c8ded613a92e0b797262985a9ccdb1e6288e;
 
     function run() external {
         vm.startBroadcast();

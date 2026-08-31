@@ -38,6 +38,11 @@ fn main(
     decision: pub u8, // 1 = ALLOW
     policy_kind: pub u8, // 0 = ALLOWED
     executor: pub Field, // address permitted to consume; committed so the proof binds to it
+    // ERC-8354 line 95: every Verdict field MUST be a public input and MUST NOT sit in
+    // the private witness. `expiry` was omitted here while the Guard checked it on chain,
+    // which left the proof unbound to it: the same proof verified under any expiry the
+    // submitter chose. Appended last so no existing public-input index moves.
+    expiry: pub Field,
     // ---- private witness ----
     chain_id: Field,
     target: Field, // call target address as an integer
@@ -47,6 +52,13 @@ fn main(
     index: Field, // leaf index of `target` in the allowlist
     path: [Field; TREE_DEPTH], // sibling hashes bottom-to-top
 ) {
+    // `expiry` is deliberately not constrained here: the Guard performs the time check and
+    // the circuit has no notion of block time. It is public so the PROOF COMMITS TO IT,
+    // which is the whole requirement. Verified by construction: proving at one expiry and
+    // verifying at another fails in the reduction step. Do not delete this binding to
+    // silence the unused warning; that is exactly the defect this line exists to close.
+    let _ = expiry;
+
     // 1. ALLOW only
     assert(decision == 1);
     // The kind is committed, so a relying party cannot be handed a taxonomy the proof never established.
@@ -155,8 +167,9 @@ fn test_allow_verdict() {
     let nullifier = std::hash::pedersen_hash([domain_id, agent_id, chi, clo, action_nonce]);
     let executor: Field = 0xE0; // matches ConsumeReal.t.sol executor address(0xE0)
 
+    let EXPIRY: Field = 1900000000;
     main(
-        agent_id, domain_id, policy_root, commit, nullifier, 1, KIND_ALLOWED, executor, chain_id, target, value,
+        agent_id, domain_id, policy_root, commit, nullifier, 1, KIND_ALLOWED, executor, EXPIRY, chain_id, target, value,
         call_data_hash, action_nonce, index, path,
     );
 }

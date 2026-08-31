@@ -18,6 +18,9 @@ import {PolicyAction, PolicyActionLib} from "../src/PolicyAction.sol";
 /// by a real UltraHonk proof of allowlist NON-membership: `policyKind == 2` is a committed public
 /// input, so the anchor records a kind the proof actually established.
 contract NotPermittedAnchorTest is Test {
+    /// The expiry the checked-in fixture proofs were generated with.
+    uint64 constant FIXTURE_EXPIRY = 1900000000;
+
     using PolicyActionLib for PolicyAction;
 
     bytes32 constant DOMAIN = bytes32(uint256(43));
@@ -52,7 +55,9 @@ contract NotPermittedAnchorTest is Test {
             policyRoot: POLICY_ROOT,
             actionCommitment: COMMITMENT,
             executor: EXECUTOR,
-            expiry: 0,
+            // The proof commits to `expiry` as public input [39], so a Verdict presented to a real
+        // proof MUST carry the value the fixture was proven with. It used to be free here.
+        expiry: FIXTURE_EXPIRY,
             nullifier: NULLIFIER,
             decision: 0,
             policyKind: PolicyKind.NOT_PERMITTED
