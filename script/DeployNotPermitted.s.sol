@@ -39,15 +39,19 @@ contract DeployNotPermitted is Script {
     bytes32 constant NULLIFIER = 0x1d38c31e6bb446623f552d36f1ce11aa86c06cefe2b5a26e53f4700792f32c84;
     address constant EXECUTOR = address(0xe0);
     uint256 constant AGENT_ID = 7;
+    // NotAllowedHonkVerifier's own VK_HASH (src/verifier/NotAllowedHonkVerifier.sol:20).
+    bytes32 constant PROGRAM_KEY = 0x2747114ccc2ace618efcd53e2322dc9b1e0978b808bd80713454591b9584cc6c;
 
     function run() external {
         vm.startBroadcast();
         NotAllowedHonkVerifier honk = new NotAllowedHonkVerifier();
-        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)));
+        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)), PROGRAM_KEY);
 
-        // programKey is bytes32(0) for the same reason the composed run uses it: this reference binds
-        // the program through the deployed verifier address rather than a separate commitment.
-        REGISTRY.registerDomain(DOMAIN_ID, msg.sender, address(adapter), bytes32(0), 1 hours);
+        // programKey is now bound at the adapter (zexoverz/confidential-agent-policy-verdicts#3):
+        // the registry declares the same value so a future `updateProgram` that rotates the key
+        // without also rotating `verifier` correctly stops verifying against this adapter, rather
+        // than silently continuing to accept proofs for a program this domain no longer runs.
+        REGISTRY.registerDomain(DOMAIN_ID, msg.sender, address(adapter), PROGRAM_KEY, 1 hours);
         REGISTRY.updateRoot(DOMAIN_ID, POLICY_ROOT);
         vm.stopBroadcast();
 
@@ -63,7 +67,7 @@ contract DeployNotPermitted is Script {
             policyKind: PolicyKind.NOT_PERMITTED
         });
         bytes memory proof = vm.readFileBinary("./test/fixtures/not_allowed.proof");
-        bool ok = IVerifier(address(adapter)).verifyProof(bytes32(0), abi.encode(v), proof);
+        bool ok = IVerifier(address(adapter)).verifyProof(PROGRAM_KEY, abi.encode(v), proof);
 
         console2.log("not_allowed proof verifies via deployed adapter:", ok);
         console2.log("NotAllowedHonkVerifier", address(honk));

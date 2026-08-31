@@ -30,6 +30,9 @@ contract MockInferenceVerifier is IProofVerifier {
 /// (the confidential corner). Same action, two orthogonal guarantees, no overlap. This is the composed
 /// example offered in the ERC-8274 thread: 8274 under the counterparty, confidential policy under CAPV.
 contract ComposedVerifyTest is Test {
+    // HonkVerifier's own VK_HASH (src/verifier/HonkVerifier.sol:20).
+    bytes32 constant PROGRAM_KEY = 0x15dfad359ae3d919488f92128f12290d908220925f263eeec28e8a97f21a372a;
+
     function test_erc8274_inference_then_capv_confidential_verdict() public {
         // ---- Layer 1: ERC-8274 verifies the AI inference produced the output ----
         IProofVerifier inference = new MockInferenceVerifier();
@@ -41,12 +44,12 @@ contract ComposedVerifyTest is Test {
         vm.warp(1_700_000_000);
         PolicyDomainRegistry registry = new PolicyDomainRegistry();
         HonkVerifier honk = new HonkVerifier();
-        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)));
+        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)), PROGRAM_KEY);
         ConfidentialPolicyVerdict guard = new ConfidentialPolicyVerdict(registry);
 
         bytes32 domainId = bytes32(uint256(42));
         bytes32 policyRoot = 0x053d4542d140ad2350a0ee79fae4a522821274e428bd881e7e803ecd816635ac;
-        registry.registerDomain(domainId, address(0xA11CE), address(adapter), bytes32(0), 1 hours);
+        registry.registerDomain(domainId, address(0xA11CE), address(adapter), PROGRAM_KEY, 1 hours);
         registry.updateRoot(domainId, policyRoot);
 
         address executor = address(0xE0);

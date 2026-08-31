@@ -40,7 +40,7 @@ contract NotPermittedAnchorTest is Test {
         transparentAnchor = new TransparentDenialAnchor();
 
         NotAllowedHonkVerifier honk = new NotAllowedHonkVerifier();
-        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)));
+        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)), PROGRAM);
         registry.registerDomain(DOMAIN, address(0xA11CE), address(adapter), PROGRAM, 1 hours);
         registry.updateRoot(DOMAIN, POLICY_ROOT);
     }

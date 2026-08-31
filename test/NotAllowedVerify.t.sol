@@ -15,13 +15,15 @@ contract NotAllowedVerifyTest is Test {
     bytes32 constant POLICY_ROOT = 0x24e703f14986ec5abcb79d7292a4593b3370440fd4d1f2b6e51653e2e045707f;
     bytes32 constant COMMITMENT = 0xd1f89cac88ca71fea90df48ba29278d5782dc8eb76127bf7bfdafca71aaa8048;
     bytes32 constant NULLIFIER = 0x1d38c31e6bb446623f552d36f1ce11aa86c06cefe2b5a26e53f4700792f32c84;
+    // NotAllowedHonkVerifier's own VK_HASH (src/verifier/NotAllowedHonkVerifier.sol:20).
+    bytes32 constant PROGRAM_KEY = 0x2747114ccc2ace618efcd53e2322dc9b1e0978b808bd80713454591b9584cc6c;
 
     NotAllowedHonkVerifier internal honk;
     HonkVerifierAdapter internal adapter;
 
     function setUp() public {
         honk = new NotAllowedHonkVerifier();
-        adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)));
+        adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)), PROGRAM_KEY);
     }
 
     function _verdict() internal pure returns (Verdict memory v) {
@@ -44,7 +46,7 @@ contract NotAllowedVerifyTest is Test {
 
     function test_realNotPermittedProofVerifies() public view {
         assertTrue(
-            IVerifier(address(adapter)).verifyProof(bytes32(0), abi.encode(_verdict()), _proof()),
+            IVerifier(address(adapter)).verifyProof(PROGRAM_KEY, abi.encode(_verdict()), _proof()),
             "real not-permitted proof must verify"
         );
     }
@@ -57,7 +59,7 @@ contract NotAllowedVerifyTest is Test {
         Verdict memory v = _verdict();
         v.policyKind = PolicyKind.DENIED;
         vm.expectRevert();
-        IVerifier(address(adapter)).verifyProof(bytes32(0), abi.encode(v), _proof());
+        IVerifier(address(adapter)).verifyProof(PROGRAM_KEY, abi.encode(v), _proof());
     }
 
     /// The executor is committed too, so the proof does not carry over to another consumer.
@@ -65,7 +67,7 @@ contract NotAllowedVerifyTest is Test {
         Verdict memory v = _verdict();
         v.executor = address(0xBAD);
         vm.expectRevert();
-        IVerifier(address(adapter)).verifyProof(bytes32(0), abi.encode(v), _proof());
+        IVerifier(address(adapter)).verifyProof(PROGRAM_KEY, abi.encode(v), _proof());
     }
 
     /// The root is the allowlist the target was proven absent from; another root is another policy.
@@ -73,6 +75,15 @@ contract NotAllowedVerifyTest is Test {
         Verdict memory v = _verdict();
         v.policyRoot = keccak256("some other allowlist");
         vm.expectRevert();
-        IVerifier(address(adapter)).verifyProof(bytes32(0), abi.encode(v), _proof());
+        IVerifier(address(adapter)).verifyProof(PROGRAM_KEY, abi.encode(v), _proof());
+    }
+
+    /// @notice A wrong program key must fail closed, not pass through to the underlying verifier.
+    function test_FIXED_WrongProgramKeyRejects() public view {
+        bytes32 wrongKey = bytes32(uint256(PROGRAM_KEY) + 1);
+        assertFalse(
+            IVerifier(address(adapter)).verifyProof(wrongKey, abi.encode(_verdict()), _proof()),
+            "adapter accepted a proof under the wrong program key"
+        );
     }
 }

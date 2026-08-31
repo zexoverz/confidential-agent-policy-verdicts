@@ -22,15 +22,17 @@ contract CloseConfidentialDenial is Script {
     bytes32 constant POLICY_ROOT = 0x053d4542d140ad2350a0ee79fae4a522821274e428bd881e7e803ecd816635ac;
     bytes32 constant COMMIT = 0x7ccb7a4e9d51128b951cbeddefaec1140180a3d13f6eae6f06596dc432057cfa;
     bytes32 constant NULLIFIER = 0x041271fcaf479f6ab927df3a03f74d3809e9f49d880cd7a9595c8dc0a58a5e03;
+    // DenyHonkVerifier's own VK_HASH (src/verifier/DenyHonkVerifier.sol:20).
+    bytes32 constant PROGRAM_KEY = 0x1ba025cf346d90403c92e71e94edba6a5ecbc58409bd73a35706e8dfe0d36f7b;
 
     function run() external {
         bytes memory proof = vm.readFileBinary("./test/fixtures/deny.proof");
 
         vm.startBroadcast();
         DenyHonkVerifier honk = new DenyHonkVerifier();
-        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)));
+        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)), PROGRAM_KEY);
 
-        REGISTRY.registerDomain(DENIAL_DOMAIN, msg.sender, address(adapter), bytes32(0), 1 hours);
+        REGISTRY.registerDomain(DENIAL_DOMAIN, msg.sender, address(adapter), PROGRAM_KEY, 1 hours);
         REGISTRY.updateRoot(DENIAL_DOMAIN, POLICY_ROOT);
 
         Verdict memory v = Verdict({
