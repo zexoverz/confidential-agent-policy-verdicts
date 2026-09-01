@@ -11,7 +11,10 @@ import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 /// Verdict -> 38-public-input adapter the ALLOW path uses. If this passes, the Sepolia anchor will too.
 contract DenyVerifyTest is Test {
     // DenyHonkVerifier's own VK_HASH (src/verifier/DenyHonkVerifier.sol:20).
-    bytes32 constant PROGRAM_KEY = 0x1ba025cf346d90403c92e71e94edba6a5ecbc58409bd73a35706e8dfe0d36f7b;
+    bytes32 constant PROGRAM_KEY = 0x0b60fc55fc2bcb71089336a87895321b4da50b971179fdec06cd6c1bc6ef0ff4;
+
+    /// The expiry the checked-in fixture proofs were generated with.
+    uint64 constant FIXTURE_EXPIRY = 1900000000;
 
     function test_realDenyProofVerifies() public {
         DenyHonkVerifier honk = new DenyHonkVerifier();
@@ -23,7 +26,9 @@ contract DenyVerifyTest is Test {
             policyRoot: 0x053d4542d140ad2350a0ee79fae4a522821274e428bd881e7e803ecd816635ac,
             actionCommitment: 0x7ccb7a4e9d51128b951cbeddefaec1140180a3d13f6eae6f06596dc432057cfa,
             executor: address(0xE0),
-            expiry: 0,
+            // The proof commits to `expiry` as public input [39], so a Verdict presented to a real
+        // proof MUST carry the value the fixture was proven with. It used to be free here.
+        expiry: FIXTURE_EXPIRY,
             nullifier: 0x041271fcaf479f6ab927df3a03f74d3809e9f49d880cd7a9595c8dc0a58a5e03,
             decision: 0,
             policyKind: PolicyKind.DENIED

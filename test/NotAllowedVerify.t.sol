@@ -12,11 +12,14 @@ import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 /// denylist paths use. The witness is the one `noir-notallowed/src/witness.nr` emits: an allowlist
 /// of four addresses, and a target (0x5555...) that sits in the gap between the second and third.
 contract NotAllowedVerifyTest is Test {
+    /// The expiry the checked-in fixture proofs were generated with.
+    uint64 constant FIXTURE_EXPIRY = 1900000000;
+
     bytes32 constant POLICY_ROOT = 0x24e703f14986ec5abcb79d7292a4593b3370440fd4d1f2b6e51653e2e045707f;
     bytes32 constant COMMITMENT = 0xd1f89cac88ca71fea90df48ba29278d5782dc8eb76127bf7bfdafca71aaa8048;
     bytes32 constant NULLIFIER = 0x1d38c31e6bb446623f552d36f1ce11aa86c06cefe2b5a26e53f4700792f32c84;
     // NotAllowedHonkVerifier's own VK_HASH (src/verifier/NotAllowedHonkVerifier.sol:20).
-    bytes32 constant PROGRAM_KEY = 0x2747114ccc2ace618efcd53e2322dc9b1e0978b808bd80713454591b9584cc6c;
+    bytes32 constant PROGRAM_KEY = 0x298a64f0bc045f79db372712eeefa00964f4867c029f8262ee724e2dca86eef6;
 
     NotAllowedHonkVerifier internal honk;
     HonkVerifierAdapter internal adapter;
@@ -33,7 +36,9 @@ contract NotAllowedVerifyTest is Test {
             policyRoot: POLICY_ROOT,
             actionCommitment: COMMITMENT,
             executor: address(0xE0),
-            expiry: 0,
+            // The proof commits to `expiry` as public input [39], so a Verdict presented to a real
+        // proof MUST carry the value the fixture was proven with. It used to be free here.
+        expiry: FIXTURE_EXPIRY,
             nullifier: NULLIFIER,
             decision: 0,
             policyKind: PolicyKind.NOT_PERMITTED

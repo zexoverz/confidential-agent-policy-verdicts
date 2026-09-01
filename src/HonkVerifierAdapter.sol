@@ -12,14 +12,24 @@ interface IHonkVerifier {
 /// @notice Adapts the Noir/UltraHonk allowlist verifier to the ERC's `IVerifier`. It serializes the
 /// Verdict fields that are the circuit's public inputs and calls the generated Honk verifier.
 ///
-/// The circuit's public inputs, in `main()` order, are 39 elements:
+/// The circuit's public inputs, in `main()` order, are 40 elements:
 ///   [0] agentId, [1] domainId, [2] policyRoot, [3..34] the 32 bytes of actionCommitment
-///   (each byte as a field element), [35] nullifier, [36] decision, [37] policyKind, [38] executor.
+///   (each byte as a field element), [35] nullifier, [36] decision, [37] policyKind, [38] executor,
+///   [39] expiry.
 /// `executor` is a committed circuit input (the proof binds to it, per the spec's Security
 /// Considerations). `policyKind` is committed too, so the four-state taxonomy cannot be asserted
-/// at the boundary without the proof having established it. `expiry` is NOT a circuit input — the
-/// Guard enforces it on-chain. All three circuits (allowlist ALLOW, denylist, allowlist
-/// non-membership) share this layout; only the constant each asserts for `policyKind` differs.
+/// at the boundary without the proof having established it.
+///
+/// `expiry` was previously omitted here, with a comment claiming that was deliberate because the
+/// Guard enforces the time check on chain. That was wrong. ERC-8354 requires every `Verdict` field
+/// to be a public input and forbids any of them sitting in the private witness, and while the
+/// Guard's check does establish that a supplied expiry is still live, it does not establish that
+/// this was the expiry the circuit authorized. The same proof verified under any expiry the
+/// submitter chose. It is now public input [39]: proving at one expiry and verifying at another
+/// fails in the verifier's reduction step.
+///
+/// All three circuits (allowlist ALLOW, denylist, allowlist non-membership) share this layout;
+/// only the constant each asserts for `policyKind` differs.
 contract HonkVerifierAdapter is IVerifier {
     IHonkVerifier public immutable honk;
     /// @notice The program key this adapter accepts. Set at deployment to the wrapped verifier's
@@ -51,9 +61,9 @@ contract HonkVerifierAdapter is IVerifier {
         return honk.verify(proof, _toPublicInputs(v));
     }
 
-    /// @notice The 39-element public-input vector the circuit expects, from a Verdict.
+    /// @notice The 40-element public-input vector the circuit expects, from a Verdict.
     function _toPublicInputs(Verdict memory v) internal pure returns (bytes32[] memory pi) {
-        pi = new bytes32[](39);
+        pi = new bytes32[](40);
         pi[0] = bytes32(v.agentId);
         pi[1] = v.domainId;
         pi[2] = v.policyRoot;
@@ -64,5 +74,6 @@ contract HonkVerifierAdapter is IVerifier {
         pi[36] = bytes32(uint256(v.decision));
         pi[37] = bytes32(uint256(v.policyKind));
         pi[38] = bytes32(uint256(uint160(v.executor)));
+        pi[39] = bytes32(uint256(v.expiry));
     }
 }

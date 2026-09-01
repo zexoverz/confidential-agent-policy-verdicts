@@ -30,7 +30,7 @@ interface IProofVerifier {
 ///   forge test --match-contract ComposedLiveRun -vvv
 contract ComposedLiveRunTest is Test {
     // HonkVerifier's own VK_HASH (src/verifier/HonkVerifier.sol:20).
-    bytes32 constant PROGRAM_KEY = 0x15dfad359ae3d919488f92128f12290d908220925f263eeec28e8a97f21a372a;
+    bytes32 constant PROGRAM_KEY = 0x10d07da428220548a6d7c4f405b1c8ded613a92e0b797262985a9ccdb1e6288e;
 
     function test_live_erc8274_plus_capv() public {
         address verifierAddr = vm.envOr("ERC8274_VERIFIER", address(0));
@@ -106,7 +106,9 @@ contract ComposedLiveRunTest is Test {
             policyRoot: policyRoot,
             actionCommitment: 0x5b5ec31c336cc8f95dc6d9025d1d008c6ed2cd5067b9c421b1d36927e230173a,
             executor: 0x1C213D41668e5bDe79AaEE2240c6f6Ad7b4c9093, // babyblue's real Sepolia key
-            expiry: uint64(block.timestamp + 1 hours),
+            // The proof commits to `expiry` as public input [39], so this must be the value the
+            // composed_live fixture was proven with.
+            expiry: 1900000000,
             nullifier: 0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f,
             decision: 1,
             policyKind: PolicyKind.ALLOWED

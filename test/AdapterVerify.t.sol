@@ -14,17 +14,22 @@ import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 contract AdapterVerifyTest is Test {
     // HonkVerifier's own VK_HASH (src/verifier/HonkVerifier.sol:20) -- the program key this
     // adapter must be constructed with and called with to accept a proof.
-    bytes32 constant PROGRAM_KEY = 0x15dfad359ae3d919488f92128f12290d908220925f263eeec28e8a97f21a372a;
+    bytes32 constant PROGRAM_KEY = 0x10d07da428220548a6d7c4f405b1c8ded613a92e0b797262985a9ccdb1e6288e;
+
+    /// The expiry the checked-in fixture proofs were generated with.
+    uint64 constant FIXTURE_EXPIRY = 1900000000;
 
     function _witnessVerdict() internal pure returns (Verdict memory v) {
-        // The Verdict for the committed witness (Prover.example.toml). expiry is Guard-only.
+        // The Verdict for the committed witness (Prover.example.toml). expiry is now bound by the proof, not Guard-only.
         v = Verdict({
             agentId: 7,
             domainId: bytes32(uint256(42)),
             policyRoot: 0x053d4542d140ad2350a0ee79fae4a522821274e428bd881e7e803ecd816635ac,
             actionCommitment: 0x7ccb7a4e9d51128b951cbeddefaec1140180a3d13f6eae6f06596dc432057cfa,
             executor: address(0xE0),
-            expiry: 0,
+            // The proof commits to `expiry` as public input [39], so a Verdict presented to a real
+        // proof MUST carry the value the fixture was proven with. It used to be free here.
+        expiry: FIXTURE_EXPIRY,
             nullifier: 0x041271fcaf479f6ab927df3a03f74d3809e9f49d880cd7a9595c8dc0a58a5e03,
             decision: 1,
             policyKind: PolicyKind.ALLOWED

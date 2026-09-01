@@ -46,6 +46,11 @@ fn main(
     decision: pub u8, // 0 = DENY
     policy_kind: pub u8, // 2 = NOT_PERMITTED (allowlist non-membership)
     executor: pub Field,
+    // ERC-8354 line 95: every Verdict field MUST be a public input and MUST NOT sit in
+    // the private witness. `expiry` was omitted here while the Guard checked it on chain,
+    // which left the proof unbound to it: the same proof verified under any expiry the
+    // submitter chose. Appended last so no existing public-input index moves.
+    expiry: pub Field,
     // ---- private witness: action preimage ----
     chain_id: Field,
     target: Field,
@@ -59,6 +64,13 @@ fn main(
     low_index: Field,
     low_path: [Field; TREE_DEPTH],
 ) {
+    // `expiry` is deliberately not constrained here: the Guard performs the time check and
+    // the circuit has no notion of block time. It is public so the PROOF COMMITS TO IT,
+    // which is the whole requirement. Verified by construction: proving at one expiry and
+    // verifying at another fails in the reduction step. Do not delete this binding to
+    // silence the unused warning; that is exactly the defect this line exists to close.
+    let _ = expiry;
+
     // 1. DENY, specifically the not-permitted kind.
     assert(decision == 0);
     assert(policy_kind == KIND_NOT_PERMITTED);
@@ -192,8 +204,9 @@ fn test_not_permitted() {
     let nullifier = std::hash::pedersen_hash([domain_id, agent_id, chi, clo, action_nonce]);
     let executor: Field = 0xE0;
 
+    let EXPIRY: Field = 1900000000;
     main(
-        agent_id, domain_id, policy_root, commit, nullifier, 0, KIND_NOT_PERMITTED, executor,
+        agent_id, domain_id, policy_root, commit, nullifier, 0, KIND_NOT_PERMITTED, executor, EXPIRY,
         chain_id, target, value, call_data_hash, action_nonce,
         low_value, low_next_value, low_next_index, low_index, low_path,
     );

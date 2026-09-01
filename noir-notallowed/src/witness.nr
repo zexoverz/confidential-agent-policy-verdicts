@@ -40,6 +40,9 @@ pub(crate) struct Action {
     pub(crate) executor: Field,
 }
 
+/// Any value works: `main` leaves `expiry` unconstrained on purpose.
+pub(crate) global SELF_CHECK_EXPIRY: Field = 1900000000;
+
 /// A complete not-permitted witness: everything `main()` takes, public and private.
 pub(crate) struct Witness {
     pub(crate) policy_root: Field,
@@ -171,6 +174,10 @@ pub(crate) fn build_witness<let N: u32>(allowlist: [Field; N], action: Action) -
         0,
         KIND_NOT_PERMITTED,
         action.executor,
+        // `expiry` is a Verdict field, not part of the action commitment, so `Action` correctly
+        // does not carry one. The circuit does not constrain it either, so any value satisfies
+        // this self-check; it is public purely so the proof commits to it.
+        SELF_CHECK_EXPIRY,
         action.chain_id,
         action.target,
         action.value,
