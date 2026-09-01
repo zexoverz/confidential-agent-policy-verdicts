@@ -173,4 +173,7 @@ Feedback from @babyblueviper1 on the Ethereum Magicians thread shaped the ERC-80
 
 ## License
 
-[CC0-1.0](./LICENSE).
+[CC0-1.0](./LICENSE), with one exception. The three generated verifiers under `src/verifier/`
+(`HonkVerifier.sol`, `DenyHonkVerifier.sol`, `NotAllowedHonkVerifier.sol`) are emitted by
+`bb write_solidity_verifier` under Apache-2.0, Copyright 2022 Aztec, and each carries its own
+SPDX header. The other sixteen Solidity files in `src/` are CC0-1.0.
