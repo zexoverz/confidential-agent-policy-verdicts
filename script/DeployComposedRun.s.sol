@@ -17,15 +17,17 @@ import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 contract DeployComposedRun is Script {
     bytes32 constant DOMAIN_ID = 0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0;
     bytes32 constant POLICY_ROOT = 0x204a14dc3ab2fdead5450192caea7428c2751b53a95b57d22f93cccb61af19a8;
+    // HonkVerifier's own VK_HASH (src/verifier/HonkVerifier.sol:20).
+    bytes32 constant PROGRAM_KEY = 0x15dfad359ae3d919488f92128f12290d908220925f263eeec28e8a97f21a372a;
 
     function run() external {
         vm.startBroadcast();
         PolicyDomainRegistry registry = new PolicyDomainRegistry();
         HonkVerifier honk = new HonkVerifier();
-        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)));
+        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)), PROGRAM_KEY);
         ConfidentialPolicyVerdict guard = new ConfidentialPolicyVerdict(registry);
 
-        registry.registerDomain(DOMAIN_ID, msg.sender, address(adapter), bytes32(0), 1 hours);
+        registry.registerDomain(DOMAIN_ID, msg.sender, address(adapter), PROGRAM_KEY, 1 hours);
         registry.updateRoot(DOMAIN_ID, POLICY_ROOT);
         vm.stopBroadcast();
 
@@ -42,7 +44,7 @@ contract DeployComposedRun is Script {
             policyKind: PolicyKind.ALLOWED
         });
         bytes memory proof = vm.readFileBinary("./test/fixtures/composed_live.proof");
-        bool ok = IVerifier(address(adapter)).verifyProof(bytes32(0), abi.encode(v), proof);
+        bool ok = IVerifier(address(adapter)).verifyProof(PROGRAM_KEY, abi.encode(v), proof);
 
         console2.log("composed_live proof verifies via deployed adapter:", ok);
         console2.log("Registry        ", address(registry));

@@ -22,15 +22,23 @@ interface IHonkVerifier {
 /// non-membership) share this layout; only the constant each asserts for `policyKind` differs.
 contract HonkVerifierAdapter is IVerifier {
     IHonkVerifier public immutable honk;
+    /// @notice The program key this adapter accepts. Set at deployment to the wrapped verifier's
+    /// own VK_HASH so a domain that rotates onto a different program (a different verifier
+    /// contract, hence a different key) cannot have its old proofs accepted by this adapter
+    /// instance -- the registry's declared `programKey` and this value must match, or verification
+    /// fails closed.
+    bytes32 public immutable expectedProgramKey;
 
-    constructor(IHonkVerifier _honk) {
+    constructor(IHonkVerifier _honk, bytes32 _expectedProgramKey) {
         honk = _honk;
+        expectedProgramKey = _expectedProgramKey;
     }
 
+    /// @param programKey MUST equal `expectedProgramKey`, or verification fails closed (returns
+    /// false, same convention as a malformed proof -- never reverts on a mismatch).
     /// @param publicInputs abi.encode(Verdict) as passed by the Guard.
     function verifyProof(
-        bytes32,
-        /* programKey */
+        bytes32 programKey,
         bytes calldata publicInputs,
         bytes calldata proof
     )
@@ -38,6 +46,7 @@ contract HonkVerifierAdapter is IVerifier {
         view
         returns (bool)
     {
+        if (programKey != expectedProgramKey) return false;
         Verdict memory v = abi.decode(publicInputs, (Verdict));
         return honk.verify(proof, _toPublicInputs(v));
     }

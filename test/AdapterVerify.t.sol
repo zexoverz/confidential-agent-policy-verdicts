@@ -12,6 +12,10 @@ import {Verdict, PolicyKind} from "../src/IConfidentialPolicyVerdict.sol";
 /// `executor` is now a committed circuit public input, so the proof binds to it (spec Security
 /// Considerations) — the negative test proves a different executor is rejected.
 contract AdapterVerifyTest is Test {
+    // HonkVerifier's own VK_HASH (src/verifier/HonkVerifier.sol:20) -- the program key this
+    // adapter must be constructed with and called with to accept a proof.
+    bytes32 constant PROGRAM_KEY = 0x15dfad359ae3d919488f92128f12290d908220925f263eeec28e8a97f21a372a;
+
     function _witnessVerdict() internal pure returns (Verdict memory v) {
         // The Verdict for the committed witness (Prover.example.toml). expiry is Guard-only.
         v = Verdict({
@@ -29,12 +33,12 @@ contract AdapterVerifyTest is Test {
 
     function test_real_proof_through_iverifier() public {
         HonkVerifier honk = new HonkVerifier();
-        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)));
+        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)), PROGRAM_KEY);
 
         Verdict memory v = _witnessVerdict();
         bytes memory proof = vm.readFileBinary("./test/fixtures/allowlist.proof");
         assertTrue(
-            adapter.verifyProof(bytes32(0), abi.encode(v), proof), "IVerifier path failed on real proof"
+            adapter.verifyProof(PROGRAM_KEY, abi.encode(v), proof), "IVerifier path failed on real proof"
         );
     }
 
@@ -44,12 +48,29 @@ contract AdapterVerifyTest is Test {
     /// the Guard's `verify` turns into a `false` via its try/catch; here we assert the rejection.
     function test_proof_rejects_wrong_executor() public {
         HonkVerifier honk = new HonkVerifier();
-        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)));
+        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)), PROGRAM_KEY);
 
         Verdict memory v = _witnessVerdict();
         v.executor = address(0xBEEF); // anything other than the committed 0xE0
         bytes memory proof = vm.readFileBinary("./test/fixtures/allowlist.proof");
         vm.expectRevert();
-        adapter.verifyProof(bytes32(0), abi.encode(v), proof);
+        adapter.verifyProof(PROGRAM_KEY, abi.encode(v), proof);
+    }
+
+    /// @notice The gap this file's earlier version had: `programKey` was accepted as a parameter
+    /// but never checked, so ANY value -- including a stale key from a domain that has since
+    /// rotated onto a different program -- verified an otherwise-valid proof. A wrong key MUST
+    /// fail closed (return false), not revert and not pass through to the underlying verifier.
+    function test_FIXED_WrongProgramKeyRejects() public {
+        HonkVerifier honk = new HonkVerifier();
+        HonkVerifierAdapter adapter = new HonkVerifierAdapter(IHonkVerifier(address(honk)), PROGRAM_KEY);
+
+        Verdict memory v = _witnessVerdict();
+        bytes memory proof = vm.readFileBinary("./test/fixtures/allowlist.proof");
+        bytes32 wrongKey = bytes32(uint256(PROGRAM_KEY) + 1);
+        assertFalse(
+            adapter.verifyProof(wrongKey, abi.encode(v), proof),
+            "adapter accepted a proof under the wrong program key"
+        );
     }
 }
