@@ -167,6 +167,49 @@ Redeploy with `forge script script/DeployComposedRun.s.sol --rpc-url <sepolia> -
 
 This is experimental software provided on an "as is" basis. It has not been audited. The Noir circuit proves allowlist membership against a policy root — the minimal viable policy; richer predicates are future work. The circuit, the generated verifier, and these contracts are all unaudited. Do not use it in production. Run your own tests and get an audit before relying on any of it.
 
+## Credential Module (`src/unclonable/`)
+
+A companion module implementing draft **ERC-XXXX: Confidential Agent Execution Credentials** — a minimal Guard primitive that verifies a zero-knowledge proof and burns a nullifier exactly once. A credential encodes a single authorized execution event for an ERC-8004 agent. The only secret is a salt; the nullifier is H(NULLIFIER_TAG, salt). Replay by a clone is impossible because the clone cannot compute a new nullifier for a spent salt.
+
+### Contracts
+
+```
+src/unclonable
+├─ interfaces/IConfidentialCredential.sol   the Capability struct and Guard interface
+├─ ConfidentialCredentialGuard.sol           the Guard: verify / consume / isConsumed
+├─ GuardedAgentExecutor.sol                  example consumer
+├─ libraries/CredentialCommitment.sol        canonical nullifier + commitment hashing
+├─ libraries/CredentialDomainRegistry.sol    domain lifecycle registry
+├─ mocks/MockVerifier.sol                    always-true mock for unit tests
+└─ verifier/
+   ├─ IVerifier.sol                          backend-agnostic verifier interface
+   ├─ HonkVerifierAdapter.sol                maps Capability to circuit public inputs
+   └─ HonkVerifier.sol                       bb-generated UltraHonk verifier
+```
+
+### consume Checks (in order)
+
+1. `homeChainId == block.chainid`
+2. `homeDomainId` is registered and not revoked
+3. `block.timestamp <= expiry`
+4. `msg.sender == executor`, or valid EIP-712 signature by executor
+5. `!consumed[nullifier]`
+6. `verifier.verify(proof, publicInputs)` passes
+7. Set `consumed[nullifier] = true`, emit `CredentialConsumed`, return nullifier
+
+### Noir Circuit
+
+See [`noir/credential-nullifier/`](./noir/credential-nullifier/) — a nullifier circuit with 1 private input (salt) and 8 public inputs.
+
+### Credential vs Policy Verdict
+
+| Feature | ConfidentialCredentialGuard | ConfidentialPolicyVerdict |
+|---------|-----------------------------|---------------------------|
+| Mechanism | Nullifier burn (one-time) | Policy verdict (allow/deny) |
+| Secret | Salt held by agent | Policy held by off-chain engine |
+| Replay | Impossible (nullifier burned) | Possible with same proof |
+| Use case | Unclonable execution credential | Pre-execution policy gate |
+
 ## Acknowledgements
 
 Feedback from @babyblueviper1 on the Ethereum Magicians thread shaped the ERC-8004 attestation design: the `artifactHash` and `mechanism` fields, and the confidential-correct vs public-recomputable framing.
