@@ -100,23 +100,36 @@ The spec's Test Cases as an executable suite, the provable-denial companion (`Pr
 
 The composed-run CAPV leg ([t/28083](https://ethereum-magicians.org/t/erc-8274-ai-inference-proof-verification/28083)) is deployed to Sepolia so the proof is recompute-verifiable on-chain by anyone, not only in a local test.
 
-There are two generations. Generation 2 is current. Generation 1 is left live and unrevoked, because its addresses have already been independently recompute-verified by other people, and breaking those references would be worse than retiring a superseded stack.
+There are three generations. Generation 3 is current. Generations 1 and 2 are left live and unrevoked, because their addresses have already been independently recompute-verified by other people, and breaking those references would be worse than retiring a superseded stack.
 
-Generation 2 replaces three contracts. The registry changed, and `registry` is `immutable` in both the Guard and `ProvableDenialAnchor`, so those had to move with it. Nothing else did. The verifiers and adapters hold no registry reference, and the proofs commit to `chain_id` and `domain_id` rather than to a registry address, so every published proof stays valid without regeneration.
+Generation 3 moves every contract, because the circuits changed. `#4` bound `expiry` as public input `[39]` on all three programs, which regenerated all three verifying keys. Each adapter is bound to its verifier's `VK_HASH` through `expectedProgramKey` (`#5`), and each registry domain declares that key as its `programKey`. Deployed with `script/DeployGeneration3.s.sol`, which asserts every leg against the new registry before it finishes.
+
+| Contract (generation 3) | Sepolia address |
+|---|---|
+| PolicyDomainRegistry | [`0x524aB668dd22DF2f7ed33cc40a74b6c05309A622`](https://repo.sourcify.dev/11155111/0x524aB668dd22DF2f7ed33cc40a74b6c05309A622) |
+| ConfidentialPolicyVerdict (Guard) | [`0x6C745fd8A3c22Ad89A73467D9D2D88F08c06Ef22`](https://repo.sourcify.dev/11155111/0x6C745fd8A3c22Ad89A73467D9D2D88F08c06Ef22) |
+| ProvableDenialAnchor (DENY and NOT_PERMITTED, confidential ZK corner) | [`0xb48C264edaf91DE3f4B9D33815ec3031cc212720`](https://repo.sourcify.dev/11155111/0xb48C264edaf91DE3f4B9D33815ec3031cc212720) |
+| HonkVerifier (composed run, ALLOW) | [`0x3C55084357A2b6994041536369e19Fe1a09EcE20`](https://repo.sourcify.dev/11155111/0x3C55084357A2b6994041536369e19Fe1a09EcE20) |
+| HonkVerifierAdapter (composed run) | [`0x46daAC304769A53EB48689aa285c931e2A331226`](https://repo.sourcify.dev/11155111/0x46daAC304769A53EB48689aa285c931e2A331226) |
+| DenyHonkVerifier (confidential DENY) | [`0x5A5ade606dc3122F9bbe7A482B076b3E131956f4`](https://repo.sourcify.dev/11155111/0x5A5ade606dc3122F9bbe7A482B076b3E131956f4) |
+| HonkVerifierAdapter (DENY leg) | [`0xB9cbABA56421560b3AC49eA65b13A14Aa9E84D11`](https://repo.sourcify.dev/11155111/0xB9cbABA56421560b3AC49eA65b13A14Aa9E84D11) |
+| NotAllowedHonkVerifier (NOT_PERMITTED) | [`0xd17EBC027598820815a10a8abDa73bCeB6969135`](https://repo.sourcify.dev/11155111/0xd17EBC027598820815a10a8abDa73bCeB6969135) |
+| HonkVerifierAdapter (NOT_PERMITTED leg) | [`0xE40763a3dC17c6c7D40bD4990920287c93AF2429`](https://repo.sourcify.dev/11155111/0xE40763a3dC17c6c7D40bD4990920287c93AF2429) |
+| TransparentDenialAnchor (DENY, transparent corner, reused) | `0xdDC3f0C1DC52d0aB617b50bef142Bf3d69eD0eF9` |
+
+The three verifiers carry the `VK_HASH` in this repository's `src/verifier/` (`0x10d07da4…288e`, `0x0b60fc55…0ff4`, `0x298a64f0…eef6`), and none of them carries the pre-fix key. Each fixture proof verifies at `expiry = 1900000000` and reverts with `SumcheckFailed()` at any other expiry.
+
+### Generation 2, superseded and not expiry-bound
+
+Generation 2 is left live and unrevoked, and it pins the pre-expiry relation. Its verifiers hold the verifying keys from before `expiry` became public input `[39]`, so a proof checked against those addresses is checked against a relation in which the same proof verifies under any expiry. Recompute references published against generation 2 remain internally consistent and are not evidence about the current circuits.
 
 | Contract (generation 2) | Sepolia address |
 |---|---|
 | PolicyDomainRegistry | `0x0AAf346913fe631023f5dB71ca8eE78624700e75` |
 | ConfidentialPolicyVerdict (Guard) | `0xE9b065B472eC75E25ad0F094Df2b6D75e3e0aC83` |
 | ProvableDenialAnchor (DENY, confidential ZK corner) | `0x19c1e7B7e2DbD345B8054D5C0276fF10f5C3B7A3` |
-
-Carried forward unchanged, shared by both generations:
-
-| Contract | Sepolia address |
-|---|---|
 | HonkVerifierAdapter (`IVerifier`) | `0x42c799cC90122705FC180B4801f4067B76843B1e` |
 | HonkVerifier (UltraHonk, ZK-optimized) | `0xF6eeF6F30D7efC96D136cf499655C8D3822B8f1b` |
-| TransparentDenialAnchor (DENY, transparent corner) | `0xdDC3f0C1DC52d0aB617b50bef142Bf3d69eD0eF9` |
 | DenyHonkVerifier (UltraHonk, confidential DENY) | `0x3A0F7f43Cee92cadbbC6073FF9B48C568E003264` |
 | HonkVerifierAdapter (confidential DENY leg) | `0x0f1b6f28C736cc58bfa486ED28C26182b41Cf76d` |
 | DenyHonkVerifierAdapter (`IVerifier`) | `0x5681F3584bfe4527e6C229Cf941E2cAA65040ecf` |
@@ -131,7 +144,7 @@ Superseded, generation 1, still live:
 | ConfidentialPolicyVerdict (Guard) | `0xc0ed1D1429Ad0982186e6E9E8dECdbCD63054c70` |
 | ProvableDenialAnchor | `0xBAb4a69EEc7282dFFB18De2655F32797D800AdA5` |
 
-All fourteen are source-verified on [Sourcify](https://sourcify.dev) with an `exact_match` on both creation and runtime bytecode, so the deployed code can be checked against this repository without trusting the address list.
+All twenty-three are source-verified on [Sourcify](https://sourcify.dev) with an `exact_match` on both creation and runtime bytecode, so the deployed code can be checked against this repository without trusting the address list.
 
 ### Why generation 2 exists
 
@@ -153,15 +166,15 @@ Verify the composed-run proof against the deployed adapter. It returns `true` wi
 
 ```bash
 RPC=https://ethereum-sepolia-rpc.publicnode.com
-ADAPTER=0x42c799cC90122705FC180B4801f4067B76843B1e
+ADAPTER=0x46daAC304769A53EB48689aa285c931e2A331226
+KEY=0x10d07da428220548a6d7c4f405b1c8ded613a92e0b797262985a9ccdb1e6288e
 PROOF=0x$(xxd -p test/fixtures/composed_live.proof | tr -d '\n')
-PUB=$(cast abi-encode "f((uint256,bytes32,bytes32,bytes32,address,uint64,bytes32,uint8))" \
-  "(54848,0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0,0x204a14dc3ab2fdead5450192caea7428c2751b53a95b57d22f93cccb61af19a8,0x5b5ec31c336cc8f95dc6d9025d1d008c6ed2cd5067b9c421b1d36927e230173a,0x1C213D41668e5bDe79AaEE2240c6f6Ad7b4c9093,1700003600,0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f,1)")
-cast call $ADAPTER "verifyProof(bytes32,bytes,bytes)(bool)" \
-  0x0000000000000000000000000000000000000000000000000000000000000000 $PUB $PROOF --rpc-url $RPC
+PUB=$(cast abi-encode "f((uint256,bytes32,bytes32,bytes32,address,uint64,bytes32,uint8,uint8))" \
+  "(54848,0x16079127bc55bd85d480837115b9bd82d26f03809c0bc4c6c80f7220836afad0,0x204a14dc3ab2fdead5450192caea7428c2751b53a95b57d22f93cccb61af19a8,0x5b5ec31c336cc8f95dc6d9025d1d008c6ed2cd5067b9c421b1d36927e230173a,0x1C213D41668e5bDe79AaEE2240c6f6Ad7b4c9093,1900000000,0x17f36ca085e9f988cc9e033ea510d5b6963265cb99e57e9677b0658531e0315f,1,0)")
+cast call $ADAPTER "verifyProof(bytes32,bytes,bytes)(bool)" $KEY $PUB $PROOF --rpc-url $RPC
 ```
 
-Redeploy with `forge script script/DeployComposedRun.s.sol --rpc-url <sepolia> --private-key <key> --broadcast`. This is a `verify`, not a `consume`: the composed-run verdict is bound to a fixed executor and expiry from the fixture, so the recompute-verifiable artifact is the deployed verifier plus the proof.
+Change `1900000000` to any other expiry and the call reverts with `SumcheckFailed()`. Redeploy with `forge script script/DeployGeneration3.s.sol --rpc-url <sepolia> --account <keystore> --broadcast`. This is a `verify`, not a `consume`: the composed-run verdict is bound to a fixed executor and expiry from the fixture, so the recompute-verifiable artifact is the deployed verifier plus the proof.
 
 ## Safety
 
